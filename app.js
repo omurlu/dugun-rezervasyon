@@ -1914,12 +1914,36 @@ function smsScheduleRows() {
     .slice(0, 12);
 }
 
+function smsTemplateForm(editing = null) {
+  return `
+    <section class="panel sms-template-form-panel">
+      <h2>${editing ? "SMS Şablonunu Düzenle" : "Yeni SMS Şablonu"}</h2>
+      <form id="smsTemplateForm">
+        <div class="form-grid thirds">
+          <div class="field"><label>Şablon Başlığı</label><input name="title" required value="${attr(editing?.title || "")}" placeholder="Örn: Prova hatırlatma"></div>
+          <div class="field"><label>Etiket</label><input name="tag" value="${attr(editing?.tag || "")}" placeholder="Prova, Tahsilat, Teşekkür"></div>
+          <div class="field"><label>Durum</label><select name="active"><option value="true" ${editing?.active !== false ? "selected" : ""}>Aktif</option><option value="false" ${editing?.active === false ? "selected" : ""}>Pasif</option></select></div>
+          <div class="field"><label>Gönderim Zamanı</label><select name="trigger"><option value="before_event" ${editing?.trigger === "before_event" ? "selected" : ""}>Organizasyondan önce</option><option value="after_event" ${editing?.trigger === "after_event" ? "selected" : ""}>Organizasyondan sonra</option><option value="manual" ${editing?.trigger === "manual" ? "selected" : ""}>Manuel</option></select></div>
+          <div class="field"><label>Gün</label><input name="offsetDays" type="number" min="0" value="${Number(editing?.offsetDays || 0)}"></div>
+          <div class="field"><label>Mod</label><select name="mode"><option value="Otomatik" ${(editing?.mode || "Otomatik") === "Otomatik" ? "selected" : ""}>Otomatik</option><option value="Manuel" ${editing?.mode === "Manuel" ? "selected" : ""}>Manuel</option></select></div>
+          <div class="field full"><label>Mesaj Metni</label><textarea name="body" required placeholder="{gelin_adi}, {damat_adi}, {mekan_adi}, {tarih}, {kalan_tutar} kullanabilirsin">${attr(editing?.body || "")}</textarea><div class="hint">Kullanılabilir alanlar: {gelin_adi}, {damat_adi}, {mekan_adi}, {tarih}, {kalan_tutar}</div></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn dark" type="submit">${editing ? "Şablonu Güncelle" : "Şablon Ekle"}</button>
+          ${editing ? `<button class="btn secondary" type="button" data-action="cancelSmsTemplateEdit">Vazgeç</button>` : ""}
+        </div>
+      </form>
+    </section>
+  `;
+}
+
 function renderSms() {
   const settings = state.smsSettings || {};
   const remaining = Number(settings.credit || 0) - Number(settings.used || 0);
   const tenant = currentTenant();
   const quota = state.tenantSmsQuotas?.[tenant?.id] || { quota: settings.defaultTenantQuota || 0, used: 0 };
   const templates = scopedItems("smsTemplates");
+  const editingTemplate = state.editingSmsTemplateId ? state.smsTemplates.find(item => item.id === state.editingSmsTemplateId) : null;
   const scheduled = smsScheduleRows();
   root.innerHTML = `
     ${pageHeader("SMS Bildirimleri", `<div class="sms-credit"><span>Ana SMS Havuzu</span><strong>${remaining.toLocaleString("tr-TR")}</strong><small>Başlık: ${settings.senderTitle || "AYSAH"}</small></div>`)}
@@ -1946,11 +1970,13 @@ function renderSms() {
       ${statCard("Aktif Şablon", templates.filter(item => item.active !== false).length, "✉", "green")}
       ${statCard("Planlanan SMS", scheduled.length, "⌁", "orange")}
     </div>
+    ${smsTemplateForm(editingTemplate)}
     <section class="panel">
       <h2>Otomatik SMS Şablonları</h2>
       <div class="sms-grid">
         ${templates.map(template => `
           <article class="sms-card ${template.active === false ? "passive" : ""}">
+            <div class="card-actions"><button type="button" data-action="editSmsTemplate" data-id="${template.id}">✎</button><button type="button" data-action="deleteSmsTemplate" data-id="${template.id}">⌫</button></div>
             <h2>${template.title}</h2>
             <span class="tag">${template.tag}</span>
             <p>${template.body}</p>
@@ -2526,6 +2552,32 @@ function bindForms() {
     showToast("SMS ayarları kaydedildi");
   });
 
+  document.querySelector("#smsTemplateForm")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.target));
+    const template = {
+      title: data.title,
+      tag: data.tag || "Genel",
+      mode: data.mode || "Otomatik",
+      trigger: data.trigger || "before_event",
+      offsetDays: Number(data.offsetDays || 0),
+      active: data.active !== "false",
+      body: data.body
+    };
+    if (state.editingSmsTemplateId) {
+      state.smsTemplates = state.smsTemplates.map(item => item.id === state.editingSmsTemplateId ? { ...item, ...template } : item);
+      state.editingSmsTemplateId = null;
+      saveState();
+      render();
+      showToast("SMS şablonu güncellendi");
+      return;
+    }
+    state.smsTemplates = [{ id: makeId(), tenantId: currentTenant()?.id, ...template }, ...state.smsTemplates];
+    saveState();
+    render();
+    showToast("SMS şablonu eklendi");
+  });
+
   document.querySelector("#detailedReservationForm")?.addEventListener("input", updateQuote);
   document.querySelector("#detailedReservationForm")?.addEventListener("change", updateQuote);
   document.querySelector("#detailedReservationForm")?.addEventListener("submit", event => {
@@ -2717,6 +2769,33 @@ document.addEventListener("click", event => {
   if (action === "cancelManagementEdit") {
     clearManagementEdit();
     showToast("Düzenleme iptal edildi");
+    return;
+  }
+  if (action === "editSmsTemplate") {
+    state.editingSmsTemplateId = actionEl?.dataset.id || null;
+    saveState();
+    render();
+    document.querySelector("#smsTemplateForm input[name='title']")?.focus();
+    return;
+  }
+  if (action === "cancelSmsTemplateEdit") {
+    state.editingSmsTemplateId = null;
+    saveState();
+    render();
+    showToast("SMS şablon düzenleme iptal edildi");
+    return;
+  }
+  if (action === "deleteSmsTemplate") {
+    const id = actionEl?.dataset.id;
+    const template = state.smsTemplates.find(item => item.id === id);
+    if (!template) return;
+    const ok = confirm(`${template.title} şablonu silinsin mi?`);
+    if (!ok) return;
+    state.smsTemplates = state.smsTemplates.filter(item => item.id !== id);
+    if (state.editingSmsTemplateId === id) state.editingSmsTemplateId = null;
+    saveState();
+    render();
+    showToast("SMS şablonu silindi");
     return;
   }
   if (action === "selectTenant") {

@@ -114,6 +114,7 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - Her mekan icin ana havuzdan kullanacagi SMS kotasi tanimlanabilir.
 - Mekanlar ayri SMS paketi almak zorunda kalmadan ana havuzdan kota kadar gonderim yapacak sekilde tasarlandi.
 - Prova, son detay, dugunden 1 gun once, odeme hatirlatmasi, tesekkur, fotograf/video teslim ve yildonumu icin otomatik SMS sablonlari eklendi.
+- SMS sablonlari ekrandan eklenebilir, duzenlenebilir, pasife alinabilir veya silinebilir hale getirildi.
 - Rezervasyon tarihine gore yaklasan otomatik SMS gonderimleri listelenir.
 - Canli SMS gonderimi icin sonraki adimda secilecek saglayicinin API formatina gore gercek gonderim baglantisi eklenecek.
 
