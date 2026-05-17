@@ -1,40 +1,47 @@
-# Düğün Platformu Proje Kaydı
+# Dugun Platformu
 
-Bu klasör bu proje için kalıcı çalışma klasörü olarak ayrıldı.
+Bu klasor projenin kalici calisma klasorudur.
 
-Klasör yolu:
+`C:\Users\bilgi\Documents\Codex\Projeler\dugun-rezervasyon`
 
-C:\Users\bilgi\Documents\Codex\2026-05-17\kredi-ekledim
+## Kolay acilis
 
-## Ana proje dosyaları
+Projeyi acmak icin bu klasordeki `baslat.bat` dosyasina cift tikla.
 
-- index.html
-- app.js
-- styles.css
-- MIMARI_NOTLARI.md
+Site dogrudan tarayicida acilir. Bu proje su anda basit HTML/CSS/JS yapisinda oldugu icin ekstra server baslatmak gerekmiyor.
 
-Bu dosyalar çalışan projenin kaynak dosyalarıdır. Asıl proje önce şu geçici/önceki klasörde bulunuyordu:
+## Ana dosyalar
 
-C:\Users\bilgi\Documents\Codex\2026-05-17\chat-senden-d-n-takip-sistemi
+- `index.html`
+- `styles.css`
+- `app.js`
+- `MIMARI_NOTLARI.md`
+- `DEVAM_ET.md`
 
-17 Mayıs 2026 tarihinde buraya kopyalandı.
+## Yarin devam etmek icin
 
-## Kurtarma kayıtları
+Codex'e sunu yazman yeterli:
 
-Ek güvenlik için açık tarayıcıdan ayrıca şu kayıtlar alındı:
+`Dugun Platformu projesine devam edelim. Klasor: C:\Users\bilgi\Documents\Codex\Projeler\dugun-rezervasyon`
 
-- kayit/current-page.html
-- kayit/recovered-styles.css
-- kayit/visible-dom-snapshot.txt
-- kayit/page-state.json
-- ekran-goruntuleri/newReservation-fullpage.png
+Ben bu klasordeki dosyalari okuyup kaldigimiz yerden devam ederim.
 
-## Yarın devam etmek için
+## GitHub
 
-Codex'e şunu yazman yeterli:
+Not edilen GitHub deposu:
 
-"Düğün Platformu projesine şu klasörden devam edelim: C:\Users\bilgi\Documents\Codex\2026-05-17\kredi-ekledim"
+`https://github.com/omurlu/dugun-rezervasyon`
 
-## GitHub notu
+Klasorde Git takibi baslatilmis, fakat GitHub remote baglantisi henuz `.git/config` icinde kayitli degil. Ayrica bu bilgisayarda `git` komutu su anda bulunamiyor.
 
-Bu proje şu anda yerel klasörde kayıtlıdır. GitHub'a otomatik gönderilmez. GitHub'a kaydetmek için ayrıca bir GitHub deposu oluşturulmalı veya mevcut depo adı verilmelidir.
+Git for Windows kurulduktan sonra bu klasor GitHub ile eslestirilecek. Ondan sonra her calisma sonunda degisiklikler hem bu bilgisayardaki dosyalarda kalacak hem de GitHub'a gonderilebilecek.
+
+## Kurtarma kayitlari
+
+Ek guvenlik icin daha once alinan kayitlar:
+
+- `kayit/current-page.html`
+- `kayit/recovered-styles.css`
+- `kayit/visible-dom-snapshot.txt`
+- `kayit/page-state.json`
+- `ekran-goruntuleri/newReservation-fullpage.png`
