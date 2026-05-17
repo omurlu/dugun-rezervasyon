@@ -8,8 +8,8 @@ const seed = {
   currentUser: { role: "admin", name: "Ana Admin" },
   activeTenantId: "tenant_lavanta",
   tenants: [
-    { id: "tenant_lavanta", name: "Lavanta Kır Bahçesi", username: "lavanta", password: "123456", status: "active", contactName: "Ayşe Demir", phone: "0532 111 2233", city: "İstanbul" },
-    { id: "tenant_safir", name: "Safir Balo Salonu", username: "safir", password: "123456", status: "active", contactName: "Mehmet Kaya", phone: "0533 444 5566", city: "Ankara" }
+    { id: "tenant_lavanta", name: "Lavanta Kır Bahçesi", username: "lavanta", password: "123456", status: "active", contactName: "Ayşe Demir", phone: "0532 111 2233", city: "İstanbul", membershipPackage: "Profesyonel", annualFee: 24000, membershipPaid: 12000 },
+    { id: "tenant_safir", name: "Safir Balo Salonu", username: "safir", password: "123456", status: "active", contactName: "Mehmet Kaya", phone: "0533 444 5566", city: "Ankara", membershipPackage: "Kurumsal", annualFee: 36000, membershipPaid: 36000 }
   ],
   organizationTypes: [
     { id: makeId(), name: "Düğün", value: "dugun" },
@@ -212,12 +212,36 @@ function normalizeState() {
   if (!Array.isArray(state.tenants) || !state.tenants.length) state.tenants = structuredClone(seed.tenants);
   if (!state.currentUser) state.currentUser = structuredClone(seed.currentUser);
   if (!state.activeTenantId || !state.tenants.some(tenant => tenant.id === state.activeTenantId)) state.activeTenantId = state.tenants[0]?.id || seed.activeTenantId;
+  normalizeTenants();
   if (!Array.isArray(state.organizationTypes)) state.organizationTypes = structuredClone(seed.organizationTypes);
   if (!Array.isArray(state.specialDays)) state.specialDays = structuredClone(seed.specialDays);
   if (!Array.isArray(state.reservations)) state.reservations = [];
   ensureDemoData();
   assignTenantIds();
+  ensureTenantDemoReservations();
   saveState();
+}
+
+function normalizeTenants() {
+  state.tenants = state.tenants.map((tenant, index) => {
+    const demoPlans = [
+      { membershipPackage: "Profesyonel", annualFee: 24000, membershipPaid: 12000 },
+      { membershipPackage: "Kurumsal", annualFee: 36000, membershipPaid: 36000 },
+      { membershipPackage: "Başlangıç", annualFee: 18000, membershipPaid: 6000 },
+      { membershipPackage: "Profesyonel", annualFee: 30000, membershipPaid: 18000 }
+    ];
+    const demoPlan = demoPlans[index % demoPlans.length];
+    const annualFee = Number(tenant.annualFee || demoPlan.annualFee);
+    const membershipPaid = Number(tenant.membershipPaid ?? demoPlan.membershipPaid);
+    return {
+      membershipPackage: demoPlan.membershipPackage,
+      annualFee,
+      membershipPaid,
+      ...tenant,
+      annualFee: Number(tenant.annualFee || annualFee),
+      membershipPaid: Number(tenant.membershipPaid ?? membershipPaid)
+    };
+  });
 }
 
 function assignTenantIds() {
@@ -305,6 +329,82 @@ function ensureDemoData() {
   state.reportStart = `${state.year}-01-01`;
   state.reportEnd = `${state.year}-12-31`;
   state.demoDataVersion = 2;
+}
+
+function ensureTenantDemoReservations() {
+  const samples = [
+    {
+      brideName: "Elif",
+      groomName: "Burak",
+      couple: "Elif ve Burak",
+      phone: "0532 410 2233",
+      date: "2026-06-14",
+      contractDate: "2026-03-12",
+      type: "dugun",
+      hallName: "Safir Balo Salonu",
+      packageName: "Düğün Gold Paket",
+      guests: 420,
+      total: 485000,
+      cost: 304000,
+      paid: 90000,
+      status: "kapora_alindi",
+      extras: ["Fotoğraf & Video Ekibi", "Drone Çekimi"],
+      menus: ["Ordövr Tabağı", "Et Kavurma Pilav", "Fıstıklı Baklava", "Limitsiz Meşrubat"]
+    },
+    {
+      brideName: "Zeynep",
+      groomName: "Mert",
+      couple: "Zeynep ve Mert",
+      phone: "0534 225 7788",
+      date: "2026-08-09",
+      contractDate: "2026-04-03",
+      type: "nisan",
+      hallName: "Lale Teras Davet",
+      packageName: "Nişan Zarafet Paketi",
+      guests: 180,
+      total: 177300,
+      cost: 104000,
+      paid: 45000,
+      status: "sozlesme",
+      extras: ["Nişan Masası Premium Dekor"],
+      menus: ["Ordövr Tabağı", "Peynirli Sigara Böreği", "Fıstıklı Baklava"]
+    },
+    {
+      brideName: "Derya",
+      groomName: "Can",
+      couple: "Derya ve Can",
+      phone: "0535 334 9012",
+      date: "2026-09-05",
+      contractDate: "2026-05-02",
+      type: "kina",
+      hallName: "Lavanta Kır Bahçesi",
+      packageName: "Kına Gecesi Paket",
+      guests: 260,
+      total: 233600,
+      cost: 142000,
+      paid: 60000,
+      status: "canli_gorusme",
+      extras: ["Kına Tahtı ve Bindallı Seti"],
+      menus: ["Düğün Çorbası", "Tavuk Şiş", "Düğün Pastası Dilimi"]
+    }
+  ];
+
+  state.tenants.forEach((tenant, index) => {
+    const hasReservation = state.reservations.some(item => item.tenantId === tenant.id);
+    if (hasReservation) return;
+    const first = samples[index % samples.length];
+    const second = samples[(index + 1) % samples.length];
+    [first, second].forEach((sample, sampleIndex) => {
+      state.reservations.push({
+        id: makeId(),
+        ...sample,
+        couple: `${sample.couple} - ${tenant.name}`,
+        tenantId: tenant.id,
+        date: sampleIndex === 0 ? sample.date : sample.date.replace("-09-", "-10-"),
+        createdAt: new Date().toLocaleString("tr-TR")
+      });
+    });
+  });
 }
 
 function money(value) {
@@ -1100,6 +1200,9 @@ function tenantMatches(tenant, query) {
     tenant.contactName,
     tenant.phone,
     tenant.city,
+    tenant.membershipPackage,
+    tenant.annualFee,
+    tenant.membershipPaid,
     tenant.status === "active" ? "aktif" : "pasif"
   ].some(value => String(value || "").toLocaleLowerCase("tr-TR").includes(needle));
 }
@@ -1107,6 +1210,9 @@ function tenantMatches(tenant, query) {
 function tenantCard(tenant) {
   const stats = tenantStats(tenant.id);
   const selected = tenant.id === state.activeTenantId;
+  const annualFee = Number(tenant.annualFee || 0);
+  const membershipPaid = Number(tenant.membershipPaid || 0);
+  const membershipDebt = Math.max(0, annualFee - membershipPaid);
   return `
     <article class="tenant-card ${selected ? "active" : ""}">
       <div>
@@ -1119,12 +1225,19 @@ function tenantCard(tenant) {
           <span>Kullanıcı adı: <strong>${tenant.username}</strong></span>
           <span>Şifre: <strong>${tenant.password}</strong></span>
         </div>
+        <div class="membership-strip">
+          <span>Üyelik: <strong>${tenant.membershipPackage || "Paket seçilmedi"}</strong></span>
+          <span>Yıllık: <strong>${money(annualFee)}</strong></span>
+          <span>Tahsilat: <strong class="profit">${money(membershipPaid)}</strong></span>
+          <span>Kalan: <strong class="${membershipDebt > 0 ? "danger-text" : "profit"}">${money(membershipDebt)}</strong></span>
+        </div>
       </div>
       <div class="tenant-metrics">
         <span>${stats.reservations} rezervasyon</span>
         <strong>${money(stats.revenue)}</strong>
         <small>Tahsilat: ${money(stats.paid)}</small>
         <button class="btn secondary" type="button" data-action="selectTenant" data-id="${tenant.id}">${selected ? "Seçili Mekan" : "Bu Mekana Geç"}</button>
+        <button class="btn secondary" type="button" data-action="editTenant" data-id="${tenant.id}">Düzenle</button>
       </div>
     </article>
   `;
@@ -1134,25 +1247,29 @@ function renderTenants() {
   const activeTenants = state.tenants.filter(item => item.status === "active").length;
   const query = state.tenantQuery || "";
   const filteredTenants = state.tenants.filter(tenant => tenantMatches(tenant, query));
+  const editingTenant = state.editingTenantId ? state.tenants.find(tenant => tenant.id === state.editingTenantId) : null;
   const tenantModal = state.showTenantModal ? `
     <div class="modal-backdrop" data-action="closeTenantModal">
       <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="tenantModalTitle">
         <div class="modal-head">
-          <h2 id="tenantModalTitle">Yeni Mekan Hesabı Aç</h2>
+          <h2 id="tenantModalTitle">${editingTenant ? "Mekan Hesabını Düzenle" : "Yeni Mekan Hesabı Aç"}</h2>
           <button class="icon-button" type="button" data-action="closeTenantModal" aria-label="Kapat">×</button>
         </div>
         <form id="tenantForm">
           <div class="form-grid">
-            <div class="field"><label>Mekan Adı *</label><input name="name" required placeholder="Örn: İnci Davet Salonu"></div>
-            <div class="field"><label>Kullanıcı Adı *</label><input name="username" required placeholder="Örn: inci"></div>
-            <div class="field"><label>Şifre *</label><input name="password" required placeholder="Geçici şifre"></div>
-            <div class="field"><label>Yetkili Kişi</label><input name="contactName" placeholder="Mekan yetkilisi"></div>
-            <div class="field"><label>Telefon</label><input name="phone" placeholder="05xx xxx xx xx"></div>
-            <div class="field"><label>Şehir</label><input name="city" placeholder="İstanbul"></div>
+            <div class="field"><label>Mekan Adı *</label><input name="name" required placeholder="Örn: İnci Davet Salonu" value="${attr(editingTenant?.name || "")}"></div>
+            <div class="field"><label>Kullanıcı Adı *</label><input name="username" required placeholder="Örn: inci" value="${attr(editingTenant?.username || "")}"></div>
+            <div class="field"><label>Şifre *</label><input name="password" required placeholder="Geçici şifre" value="${attr(editingTenant?.password || "")}"></div>
+            <div class="field"><label>Yetkili Kişi</label><input name="contactName" placeholder="Mekan yetkilisi" value="${attr(editingTenant?.contactName || "")}"></div>
+            <div class="field"><label>Telefon</label><input name="phone" placeholder="05xx xxx xx xx" value="${attr(editingTenant?.phone || "")}"></div>
+            <div class="field"><label>Şehir</label><input name="city" placeholder="İstanbul" value="${attr(editingTenant?.city || "")}"></div>
+            <div class="field"><label>Üyelik Paketi *</label><select name="membershipPackage" required><option value="Başlangıç" ${editingTenant?.membershipPackage === "Başlangıç" ? "selected" : ""}>Başlangıç</option><option value="Profesyonel" ${!editingTenant || editingTenant?.membershipPackage === "Profesyonel" ? "selected" : ""}>Profesyonel</option><option value="Kurumsal" ${editingTenant?.membershipPackage === "Kurumsal" ? "selected" : ""}>Kurumsal</option></select></div>
+            <div class="field"><label>Yıllık Üyelik Ücreti (₺) *</label><input name="annualFee" type="number" min="0" required value="${attr(editingTenant?.annualFee ?? 24000)}"></div>
+            <div class="field"><label>Tahsil Edilen (₺)</label><input name="membershipPaid" type="number" min="0" value="${attr(editingTenant?.membershipPaid ?? 0)}"></div>
           </div>
           <div class="form-actions">
             <button class="btn secondary" type="button" data-action="closeTenantModal">Vazgeç</button>
-            <button class="btn dark" type="submit">Mekan Hesabı Aç</button>
+            <button class="btn dark" type="submit">${editingTenant ? "Mekanı Güncelle" : "Mekan Hesabı Aç"}</button>
           </div>
         </form>
       </section>
@@ -1353,22 +1470,29 @@ function bindForms() {
   document.querySelector("#tenantForm")?.addEventListener("submit", event => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.target));
+    const isEditingTenant = Boolean(state.editingTenantId);
     const tenant = {
-      id: `tenant_${slugify(data.username || data.name) || makeId()}`,
+      id: state.editingTenantId || `tenant_${slugify(data.username || data.name) || makeId()}`,
       name: data.name,
       username: data.username,
       password: data.password,
       contactName: data.contactName,
       phone: data.phone,
       city: data.city,
+      membershipPackage: data.membershipPackage,
+      annualFee: Number(data.annualFee || 0),
+      membershipPaid: Number(data.membershipPaid || 0),
       status: "active"
     };
-    state.tenants = [tenant, ...state.tenants];
+    state.tenants = state.editingTenantId
+      ? state.tenants.map(item => item.id === state.editingTenantId ? { ...item, ...tenant } : item)
+      : [tenant, ...state.tenants];
     state.activeTenantId = tenant.id;
     state.showTenantModal = false;
+    state.editingTenantId = null;
     saveState();
     render();
-    showToast("Mekan hesabı açıldı");
+    showToast(isEditingTenant ? "Mekan hesabı güncellendi" : "Mekan hesabı açıldı");
   });
 
   document.querySelector("#tenantSearch")?.addEventListener("input", event => {
@@ -1632,7 +1756,18 @@ document.addEventListener("click", event => {
     }
     return;
   }
+  if (action === "editTenant") {
+    const tenantId = actionEl?.dataset.id;
+    if (state.tenants.some(tenant => tenant.id === tenantId)) {
+      state.editingTenantId = tenantId;
+      state.showTenantModal = true;
+      saveState();
+      render();
+    }
+    return;
+  }
   if (action === "focusTenantForm") {
+    state.editingTenantId = null;
     state.showTenantModal = true;
     saveState();
     render();
@@ -1640,8 +1775,9 @@ document.addEventListener("click", event => {
     return;
   }
   if (action === "closeTenantModal") {
-    if (event.target.closest(".modal-panel") && !event.target.closest("[data-action='closeTenantModal']")) return;
+    if (actionEl?.classList.contains("modal-backdrop") && event.target.closest(".modal-panel")) return;
     state.showTenantModal = false;
+    state.editingTenantId = null;
     saveState();
     render();
     return;

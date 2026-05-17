@@ -48,6 +48,27 @@ Takip karari:
 - Mekan hesaplari, ana admin ve mekan paneli yapisi oturunca bu dal `main` ile birlestirilecek.
 - Kullanici "ne zaman dersen birlestiririz" dedi; birlestirme zamanini Codex uygun noktada onerecek.
 
+## Test Verisi Notu
+
+Mekan paneli testlerini kolaylastirmak icin bos mekan hesaplarina otomatik ornek rezervasyon kaydi ekleyen demo veri mantigi baslatildi.
+
+- Hic rezervasyonu olmayan her mekan icin 2 mantikli ornek rezervasyon uretilir.
+- Orneklerde organizasyon turu, salon, paket, davetli sayisi, toplam tutar, maliyet, kapora, ekstra ve menu bilgileri bulunur.
+- Boylece mekan degistirme, rezervasyon listesi, raporlar ve tahsilat alanlari bos kalmadan test edilebilir.
+
+## Mekan Uyelik Takibi
+
+Ana admin tarafinda mekan hesabi acilirken ve mekan listesinde uyelik bilgileri takip edilecek:
+
+- Mekana verilen uyelik paketi.
+- Yillik uyelik ucreti.
+- Bu uyelikten tahsil edilen tutar.
+- Uyelikten kalan borc.
+
+Mekanlar listesinde bu bilgiler her mekan kartinda gorunur. Bu alanlar ana adminin kendi musteri/mekan tahsilatini takip etmesi icindir; mekanin kendi dugun rezervasyon muhasebesinden ayridir.
+
+Demo mekanlarda uyelik finans alanlari bos kalmasin diye ornek paket/ucret/tahsilat/kalan borc verileri otomatik tamamlanir.
+
 ## GitHub baglantisi
 
 GitHub deposu olarak su adres not edildi:
