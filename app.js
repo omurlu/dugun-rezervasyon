@@ -192,7 +192,7 @@ const toast = document.querySelector("#toast");
 const sidebar = document.querySelector(".sidebar");
 const accountPill = document.querySelector("#accountPill");
 const smsCreditPill = document.querySelector("#smsCreditPill");
-const tenantScopedCollections = ["organizationTypes", "halls", "packages", "extras", "menuCategories", "menus", "reservations", "smsTemplates", "stock", "staff", "suppliers"];
+const tenantScopedCollections = ["organizationTypes", "halls", "packages", "extras", "menuCategories", "menus", "reservations", "smsTemplates", "stock", "staff", "staffAssignments", "suppliers"];
 normalizeState();
 
 function loadState() {
@@ -217,9 +217,12 @@ function normalizeState() {
   if (!Array.isArray(state.organizationTypes)) state.organizationTypes = structuredClone(seed.organizationTypes);
   if (!Array.isArray(state.specialDays)) state.specialDays = structuredClone(seed.specialDays);
   if (!Array.isArray(state.reservations)) state.reservations = [];
+  if (!Array.isArray(state.staffAssignments)) state.staffAssignments = [];
   ensureDemoData();
   assignTenantIds();
   ensureTenantDemoReservations();
+  ensureTenantDemoStaff();
+  ensureTenantDemoStaffAssignments();
   markTenantDemoReservations();
   ensureLastYearComparisonReservations();
   ensureSmsSystem();
@@ -653,6 +656,59 @@ function ensureTenantDemoReservations() {
         tenantId: tenant.id,
         demoReservation: true,
         createdAt: new Date().toLocaleString("tr-TR")
+      });
+    });
+  });
+}
+
+function ensureTenantDemoStaff() {
+  const staffSamples = [
+    { name: "Ahmet Yılmaz", role: "Etkinlik Koordinatörü", phone: "0532 111 2233", email: "ahmet@example.com", events: 5, active: true },
+    { name: "Ayşe Demir", role: "Dekorasyon Sorumlusu", phone: "0533 444 5566", email: "ayse@example.com", events: 3, active: true },
+    { name: "Mehmet Kaya", role: "Teknik Ekip Lideri", phone: "0534 777 8899", email: "mehmet@example.com", events: 4, active: true },
+    { name: "Fatma Öztürk", role: "Mutfak Şefi", phone: "0535 222 3344", email: "fatma@example.com", events: 6, active: true }
+  ];
+
+  state.tenants.forEach((tenant, tenantIndex) => {
+    const currentStaff = state.staff.filter(item => item.tenantId === tenant.id);
+    if (currentStaff.length) return;
+    staffSamples.slice(0, 3).forEach((sample, index) => {
+      state.staff.push({
+        id: makeId(),
+        tenantId: tenant.id,
+        ...staffSamples[(tenantIndex + index) % staffSamples.length]
+      });
+    });
+  });
+}
+
+function ensureTenantDemoStaffAssignments() {
+  state.tenants.forEach(tenant => {
+    const staff = state.staff.filter(item => item.tenantId === tenant.id);
+    const reservations = state.reservations
+      .filter(item => item.tenantId === tenant.id && !item.comparisonDemoReservation)
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 4);
+    if (!staff.length || !reservations.length) return;
+    const hasAssignment = state.staffAssignments.some(item => item.tenantId === tenant.id);
+    if (hasAssignment) return;
+    const roles = ["Piyanist", "Garson", "Servis Şefi", "Fotoğraf Destek"];
+    reservations.forEach((reservation, index) => {
+      const staffMember = staff[index % staff.length];
+      const dailyWage = [3500, 1800, 2400, 2200][index % 4];
+      const paid = [1500, 1800, 1000, 0][index % 4];
+      state.staffAssignments.push({
+        id: makeId(),
+        tenantId: tenant.id,
+        staffId: staffMember.id,
+        reservationId: reservation.id,
+        date: reservation.date,
+        role: roles[index % roles.length],
+        dailyWage,
+        paid,
+        status: paid >= dailyWage ? "paid" : paid > 0 ? "partial" : "unpaid",
+        note: `${reservation.couple} organizasyonu için görev`
       });
     });
   });
@@ -2029,26 +2085,152 @@ function renderStock() {
   `;
 }
 
+function staffAssignmentTotals(staffId = null) {
+  const assignments = scopedItems("staffAssignments").filter(item => !staffId || item.staffId === staffId);
+  return assignments.reduce((acc, item) => {
+    acc.count += 1;
+    acc.total += Number(item.dailyWage || 0);
+    acc.paid += Number(item.paid || 0);
+    return acc;
+  }, { count: 0, total: 0, paid: 0 });
+}
+
+function assignmentStatusLabel(status) {
+  return {
+    paid: "Ödendi",
+    partial: "Kısmi Ödendi",
+    unpaid: "Ödenmedi"
+  }[status] || "Kısmi Ödendi";
+}
+
+function assignmentStatusClass(status) {
+  return {
+    paid: "ok",
+    partial: "warn",
+    unpaid: "danger"
+  }[status] || "warn";
+}
+
+function renderStaffAssignmentForm(editing = null) {
+  const staff = scopedItems("staff");
+  const reservations = visibleReservations()
+    .filter(item => !item.comparisonDemoReservation)
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return `
+    <section class="panel">
+      <h2>${editing ? "Görevlendirme Düzenle" : "Yeni Görevlendirme"}</h2>
+      <form id="staffAssignmentForm">
+        <div class="form-grid thirds">
+          <div class="field"><label>Personel</label><select name="staffId" required><option value="">Seçin</option>${staff.map(item => `<option value="${item.id}" ${editing?.staffId === item.id ? "selected" : ""}>${item.name} - ${item.role}</option>`).join("")}</select></div>
+          <div class="field"><label>Rezervasyon / Organizasyon</label><select name="reservationId" required><option value="">Seçin</option>${reservations.map(item => `<option value="${item.id}" ${editing?.reservationId === item.id ? "selected" : ""}>${new Date(item.date).toLocaleDateString("tr-TR")} - ${item.couple}</option>`).join("")}</select></div>
+          <div class="field"><label>Görev</label><input name="role" required value="${attr(editing?.role || "")}" placeholder="Piyanist, garson, servis şefi"></div>
+          <div class="field"><label>Tarih</label><input name="date" type="date" value="${attr(editing?.date || today())}"></div>
+          <div class="field"><label>Günlük Yevmiye</label><input name="dailyWage" type="number" min="0" value="${Number(editing?.dailyWage || 0)}"></div>
+          <div class="field"><label>Ödenen</label><input name="paid" type="number" min="0" value="${Number(editing?.paid || 0)}"></div>
+          <div class="field full"><label>Not</label><textarea name="note" placeholder="Görev, saat, özel not...">${attr(editing?.note || "")}</textarea></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn dark" type="submit">${editing ? "Görevlendirmeyi Güncelle" : "Görevlendir"}</button>
+          <button class="btn secondary" type="button" data-action="cancelStaffAssignmentEdit">Vazgeç</button>
+        </div>
+      </form>
+    </section>
+  `;
+}
+
+function staffAssignmentCard(assignment) {
+  const staffMember = state.staff.find(item => item.id === assignment.staffId);
+  const reservation = state.reservations.find(item => item.id === assignment.reservationId);
+  const remaining = Number(assignment.dailyWage || 0) - Number(assignment.paid || 0);
+  return `
+    <article class="assignment-card">
+      <div>
+        <span class="badge ${assignmentStatusClass(assignment.status)}">${assignmentStatusLabel(assignment.status)}</span>
+        <h3>${staffMember?.name || "Personel yok"}</h3>
+        <p>${assignment.role || staffMember?.role || "Görev belirtilmedi"}</p>
+        <div class="assignment-meta">
+          <span>${new Date(assignment.date).toLocaleDateString("tr-TR")}</span>
+          <span>${reservation?.couple || "Rezervasyon bulunamadı"}</span>
+          <span>${reservation?.hallName || ""}</span>
+        </div>
+        ${assignment.note ? `<small>${assignment.note}</small>` : ""}
+      </div>
+      <div class="assignment-money">
+        <span>Yevmiye <strong>${money(assignment.dailyWage)}</strong></span>
+        <span>Ödenen <strong class="profit">${money(assignment.paid)}</strong></span>
+        <span>Kalan <strong class="${remaining > 0 ? "danger-text" : "profit"}">${money(remaining)}</strong></span>
+      </div>
+      <div class="row-actions">
+        <button class="small-icon" type="button" data-action="editStaffAssignment" data-id="${assignment.id}">✎ Düzenle</button>
+        <button class="small-icon delete" type="button" data-action="deleteStaffAssignment" data-id="${assignment.id}">⌫ Sil</button>
+      </div>
+    </article>
+  `;
+}
+
 function renderStaff() {
-  const active = state.staff.filter(item => item.active).length;
+  const staff = scopedItems("staff");
+  const editing = state.editingStaffId ? state.staff.find(item => item.id === state.editingStaffId) : null;
+  const editingAssignment = state.editingStaffAssignmentId ? state.staffAssignments.find(item => item.id === state.editingStaffAssignmentId) : null;
+  const showForm = Boolean(state.showStaffForm || editing);
+  const showAssignmentForm = Boolean(state.showStaffAssignmentForm || editingAssignment);
+  const assignments = scopedItems("staffAssignments").slice().sort((a, b) => a.date.localeCompare(b.date));
+  const assignmentTotals = staffAssignmentTotals();
+  const active = staff.filter(item => item.active).length;
   root.innerHTML = `
-    ${pageHeader("Personel Yönetimi", `<button class="btn">+ Yeni Personel Ekle</button>`)}
+    ${pageHeader("Personel Yönetimi", `<div class="row-actions"><button class="btn secondary" type="button" data-action="newStaffAssignment">+ Görevlendirme</button><button class="btn" type="button" data-action="newStaff">+ Yeni Personel Ekle</button></div>`)}
     <div class="stats-grid three-cols">
-      ${statCard("Toplam Personel", state.staff.length, "♙", "violet")}
-      ${statCard("Aktif Personel", active, "♙", "green")}
-      ${statCard("Toplam Atama", state.staff.reduce((sum, item) => sum + item.events, 0), "□", "blue")}
+      ${statCard("Toplam Personel", staff.length, "♙", "violet")}
+      ${statCard("Görev Kaydı", assignmentTotals.count, "□", "blue")}
+      ${statCard("Kalan Personel Alacağı", money(assignmentTotals.total - assignmentTotals.paid), "₺", assignmentTotals.total - assignmentTotals.paid > 0 ? "orange" : "green", `${active} aktif personel`)}
     </div>
+    ${showAssignmentForm ? renderStaffAssignmentForm(editingAssignment) : ""}
+    ${showForm ? `<section class="panel">
+      <h2>${editing ? "Personel Düzenle" : "Yeni Personel Ekle"}</h2>
+      <form id="staffForm">
+        <div class="form-grid thirds">
+          <div class="field"><label>Ad Soyad</label><input name="name" required value="${attr(editing?.name || "")}" placeholder="Örn: Ahmet Yılmaz"></div>
+          <div class="field"><label>Görev</label><input name="role" required value="${attr(editing?.role || "")}" placeholder="Örn: Etkinlik Koordinatörü"></div>
+          <div class="field"><label>Telefon</label><input name="phone" value="${attr(editing?.phone || "")}" placeholder="05xx xxx xx xx"></div>
+          <div class="field"><label>E-posta</label><input name="email" type="email" value="${attr(editing?.email || "")}" placeholder="ornek@mail.com"></div>
+          <div class="field"><label>Atama / Etkinlik Sayısı</label><input name="events" type="number" min="0" value="${Number(editing?.events || 0)}"></div>
+          <div class="field"><label>Durum</label><select name="active"><option value="true" ${editing?.active !== false ? "selected" : ""}>Aktif</option><option value="false" ${editing?.active === false ? "selected" : ""}>Pasif</option></select></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn dark" type="submit">${editing ? "Personeli Güncelle" : "Personel Ekle"}</button>
+          <button class="btn secondary" type="button" data-action="cancelStaffEdit">Vazgeç</button>
+        </div>
+      </form>
+    </section>` : ""}
     <div class="staff-grid">
-      ${state.staff.map(item => `
+      ${staff.map(item => `
         <article class="person-card">
+          ${(() => {
+            const totals = staffAssignmentTotals(item.id);
+            const remaining = totals.total - totals.paid;
+            return `
           <span class="status ${item.active ? "ok" : ""}">${item.active ? "Aktif" : "Pasif"}</span>
           <h2>${item.name}</h2>
           <p>${item.role}</p>
-          <div class="person-meta"><span>☎ ${item.phone}</span><span>✉ ${item.email}</span><span>□ ${item.events} Etkinlik</span></div>
-          <div class="row-actions"><button class="small-icon">✎ Düzenle</button><button class="small-icon delete">⌫</button></div>
+          <div class="person-meta"><span>☎ ${item.phone}</span><span>✉ ${item.email}</span><span>□ ${totals.count} görev</span><span>Yevmiye: ${money(totals.total)}</span><span>Ödenen: ${money(totals.paid)}</span><span>Kalan: <strong class="${remaining > 0 ? "danger-text" : "profit"}">${money(remaining)}</strong></span></div>
+            `;
+          })()}
+          <div class="row-actions">
+            <button class="small-icon" type="button" data-action="editStaff" data-id="${item.id}">✎ Düzenle</button>
+            ${state.pendingStaffDeleteId === item.id
+              ? `<button class="small-icon delete confirm-delete" type="button" data-action="confirmDeleteStaff" data-id="${item.id}">Silinsin mi?</button><button class="small-icon" type="button" data-action="cancelStaffDelete">Vazgeç</button>`
+              : `<button class="small-icon delete" type="button" data-action="deleteStaff" data-id="${item.id}">⌫ Sil</button>`}
+          </div>
         </article>
-      `).join("")}
+      `).join("") || empty("Personel kaydı yok", "Yeni Personel Ekle alanından ilk personeli oluşturabilirsiniz.")}
     </div>
+    <section class="panel">
+      <h2>Görev ve Yevmiye Kartları</h2>
+      <div class="assignment-grid">
+        ${assignments.map(staffAssignmentCard).join("") || empty("Henüz görevlendirme yok", "Yeni Görevlendirme ile personeli bir organizasyona bağlayabilirsiniz.")}
+      </div>
+    </section>
   `;
 }
 
@@ -2578,6 +2760,65 @@ function bindForms() {
     showToast("SMS şablonu eklendi");
   });
 
+  document.querySelector("#staffForm")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.target));
+    const staffMember = {
+      name: data.name,
+      role: data.role,
+      phone: data.phone,
+      email: data.email,
+      events: Number(data.events || 0),
+      active: data.active !== "false"
+    };
+    if (state.editingStaffId) {
+      state.staff = state.staff.map(item => item.id === state.editingStaffId ? { ...item, ...staffMember } : item);
+      state.editingStaffId = null;
+      state.showStaffForm = false;
+      saveState();
+      render();
+      showToast("Personel güncellendi");
+      return;
+    }
+    state.staff = [{ id: makeId(), tenantId: currentTenant()?.id, ...staffMember }, ...state.staff];
+    state.showStaffForm = false;
+    saveState();
+    render();
+    showToast("Personel eklendi");
+  });
+
+  document.querySelector("#staffAssignmentForm")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.target));
+    const reservation = state.reservations.find(item => item.id === data.reservationId);
+    const dailyWage = Number(data.dailyWage || 0);
+    const paid = Number(data.paid || 0);
+    const assignment = {
+      staffId: data.staffId,
+      reservationId: data.reservationId,
+      date: data.date || reservation?.date || today(),
+      role: data.role,
+      dailyWage,
+      paid,
+      status: paid >= dailyWage ? "paid" : paid > 0 ? "partial" : "unpaid",
+      note: data.note
+    };
+    if (state.editingStaffAssignmentId) {
+      state.staffAssignments = state.staffAssignments.map(item => item.id === state.editingStaffAssignmentId ? { ...item, ...assignment } : item);
+      state.editingStaffAssignmentId = null;
+      state.showStaffAssignmentForm = false;
+      saveState();
+      render();
+      showToast("Görevlendirme güncellendi");
+      return;
+    }
+    state.staffAssignments = [{ id: makeId(), tenantId: currentTenant()?.id, ...assignment }, ...state.staffAssignments];
+    state.showStaffAssignmentForm = false;
+    saveState();
+    render();
+    showToast("Personel görevlendirildi");
+  });
+
   document.querySelector("#detailedReservationForm")?.addEventListener("input", updateQuote);
   document.querySelector("#detailedReservationForm")?.addEventListener("change", updateQuote);
   document.querySelector("#detailedReservationForm")?.addEventListener("submit", event => {
@@ -2796,6 +3037,88 @@ document.addEventListener("click", event => {
     saveState();
     render();
     showToast("SMS şablonu silindi");
+    return;
+  }
+  if (action === "newStaff") {
+    state.editingStaffId = null;
+    state.showStaffForm = true;
+    saveState();
+    render();
+    document.querySelector("#staffForm input[name='name']")?.focus();
+    return;
+  }
+  if (action === "editStaff") {
+    state.editingStaffId = actionEl?.dataset.id || null;
+    state.showStaffForm = true;
+    saveState();
+    render();
+    document.querySelector("#staffForm input[name='name']")?.focus();
+    return;
+  }
+  if (action === "cancelStaffEdit") {
+    state.editingStaffId = null;
+    state.showStaffForm = false;
+    saveState();
+    render();
+    showToast("Personel düzenleme iptal edildi");
+    return;
+  }
+  if (action === "deleteStaff") {
+    const id = actionEl?.dataset.id;
+    const staffMember = state.staff.find(item => item.id === id);
+    if (!staffMember) return;
+    state.pendingStaffDeleteId = id;
+    saveState();
+    render();
+    showToast("Silmek için tekrar onayla");
+    return;
+  }
+  if (action === "cancelStaffDelete") {
+    state.pendingStaffDeleteId = null;
+    saveState();
+    render();
+    return;
+  }
+  if (action === "confirmDeleteStaff") {
+    const id = actionEl?.dataset.id;
+    state.staff = state.staff.filter(item => item.id !== id);
+    if (state.editingStaffId === id) state.editingStaffId = null;
+    state.pendingStaffDeleteId = null;
+    saveState();
+    render();
+    showToast("Personel silindi");
+    return;
+  }
+  if (action === "newStaffAssignment") {
+    state.editingStaffAssignmentId = null;
+    state.showStaffAssignmentForm = true;
+    saveState();
+    render();
+    document.querySelector("#staffAssignmentForm select[name='staffId']")?.focus();
+    return;
+  }
+  if (action === "editStaffAssignment") {
+    state.editingStaffAssignmentId = actionEl?.dataset.id || null;
+    state.showStaffAssignmentForm = true;
+    saveState();
+    render();
+    document.querySelector("#staffAssignmentForm select[name='staffId']")?.focus();
+    return;
+  }
+  if (action === "cancelStaffAssignmentEdit") {
+    state.editingStaffAssignmentId = null;
+    state.showStaffAssignmentForm = false;
+    saveState();
+    render();
+    return;
+  }
+  if (action === "deleteStaffAssignment") {
+    const id = actionEl?.dataset.id;
+    state.staffAssignments = state.staffAssignments.filter(item => item.id !== id);
+    if (state.editingStaffAssignmentId === id) state.editingStaffAssignmentId = null;
+    saveState();
+    render();
+    showToast("Görevlendirme silindi");
     return;
   }
   if (action === "selectTenant") {

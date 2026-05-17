@@ -118,6 +118,17 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - Rezervasyon tarihine gore yaklasan otomatik SMS gonderimleri listelenir.
 - Canli SMS gonderimi icin sonraki adimda secilecek saglayicinin API formatina gore gercek gonderim baglantisi eklenecek.
 
+## Personel Notu
+
+- Personel bolumune ekleme, duzenleme, vazgec ve silme akisi eklendi.
+- Her mekan icin demo personel kayitlari otomatik olusturulur.
+- Personel kartlarindaki Duzenle butonu formu doldurur; kaydedince kart ve istatistikler guncellenir.
+- Personel silme tarayici onay penceresi yerine iki asamali hale getirildi: ilk tiklama onay ister, ikinci tiklama siler.
+- Yeni Personel Ekle butonu formu net sekilde acar; form kayit sonrasi kapanip personel karti listeye eklenir.
+- Personel bolumu gorevlendirme/yevmiye mantigina genisletildi.
+- Mekan sahibi personeli secip rezervasyona baglayabilir; gorev, tarih, gunluk yevmiye, odenen tutar ve kalan alacak kart olarak takip edilir.
+- Personel kartlari artik toplam gorev, toplam yevmiye, odenen ve kalan alacak ozetlerini gosterir.
+
 ## GitHub baglantisi
 
 GitHub deposu olarak su adres not edildi:

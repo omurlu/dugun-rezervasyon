@@ -1662,6 +1662,67 @@ th {
   margin-bottom: 22px;
 }
 
+.assignment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.assignment-card {
+  display: grid;
+  grid-template-columns: 1.3fr minmax(180px, .7fr);
+  gap: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.assignment-card h3 {
+  margin: 12px 0 6px;
+  font-size: 19px;
+}
+
+.assignment-card p {
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+
+.assignment-card small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.assignment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #64748b;
+  margin-bottom: 10px;
+}
+
+.assignment-money {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.assignment-money span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+}
+
+.assignment-money strong {
+  color: var(--ink);
+}
+
+.assignment-card .row-actions {
+  grid-column: 1 / -1;
+}
+
 .stat-card.green .stat-value,
 .stat-card.green .stat-icon { color: var(--green); }
 .stat-card.red .stat-value,
@@ -1692,7 +1753,7 @@ th {
   .insight-grid, .comparison-grid, .top-earners-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sms-overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .monthly-chart { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .sms-grid, .staff-grid { grid-template-columns: 1fr; }
+  .sms-grid, .staff-grid, .assignment-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 720px) {
@@ -1712,6 +1773,7 @@ th {
   .panel { padding: 18px; }
   .page-title h1, .calendar-title { font-size: 28px; }
   .item-row, .reservation-row { grid-template-columns: 1fr; }
+  .assignment-card { grid-template-columns: 1fr; }
   .row-actions { justify-content: flex-start; }
   .section-head, .big-reservation-card { grid-template-columns: 1fr; flex-direction: column; align-items: stretch; }
   .comparison-chart-row, .chart-line { grid-template-columns: 1fr; }
