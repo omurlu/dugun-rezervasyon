@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Düğün Platformu</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Ana menü">
+      <button class="mobile-close" type="button" aria-label="Menüyü kapat">×</button>
+      <a class="side-primary nav-link active" href="#dashboard" data-view="dashboard">
+        <span class="icon">⌂</span>
+        <span>Ana Sayfa</span>
+      </a>
+      <a class="side-link nav-link" href="#reservations" data-view="reservations">
+        <span class="icon">☰</span>
+        <span>Tüm Rezervasyonlar</span>
+      </a>
+
+      <div class="side-group">
+        <div class="side-heading">
+          <span><span class="icon">⚙</span> Yönetim</span>
+          <span>⌃</span>
+        </div>
+        <a class="side-link nav-link" href="#types" data-view="types"><span class="icon">◴</span> Organizasyon Türleri</a>
+        <a class="side-link nav-link" href="#halls" data-view="halls"><span class="icon">▥</span> Salonlar</a>
+        <a class="side-link nav-link" href="#packages" data-view="packages"><span class="icon">◇</span> Paketler</a>
+        <a class="side-link nav-link" href="#extras" data-view="extras"><span class="icon">✦</span> Ekstra Özel Seçim</a>
+        <a class="side-link nav-link" href="#menuCategories" data-view="menuCategories"><span class="icon">⌑</span> Menü Kategorileri</a>
+        <a class="side-link nav-link" href="#menus" data-view="menus"><span class="icon">☷</span> Yemek Menüsü</a>
+      </div>
+
+      <div class="side-group">
+        <div class="side-heading">
+          <span><span class="icon">▥</span> Raporlar</span>
+          <span>⌃</span>
+        </div>
+        <a class="side-link nav-link" href="#reports" data-view="reports"><span class="icon">▣</span> Genel Özet</a>
+        <a class="side-link nav-link" href="#reportTypes" data-view="reportTypes"><span class="icon">◴</span> Organizasyon Türü</a>
+        <a class="side-link nav-link" href="#reportHalls" data-view="reportHalls"><span class="icon">▥</span> Salon Raporu</a>
+        <a class="side-link nav-link" href="#reportPackages" data-view="reportPackages"><span class="icon">◇</span> Paket Raporu</a>
+        <a class="side-link nav-link" href="#reportExtras" data-view="reportExtras"><span class="icon">✦</span> Ekstra Raporu</a>
+        <a class="side-link nav-link" href="#reportMenus" data-view="reportMenus"><span class="icon">☷</span> Menü Raporu</a>
+      </div>
+
+      <a class="side-link nav-link" href="#messages" data-view="messages"><span class="icon">✉</span> SMS Bildirimleri</a>
+      <a class="side-link nav-link" href="#staff" data-view="staff"><span class="icon">♚</span> Personel</a>
+      <a class="side-link nav-link" href="#suppliers" data-view="suppliers"><span class="icon">▤</span> Tedarikçi</a>
+      <a class="side-link nav-link" href="#supplierAccount" data-view="supplierAccount"><span class="icon">▦</span> Tedarikçi Cari</a>
+      <a class="side-link nav-link" href="#stock" data-view="stock"><span class="icon">⬡</span> Stok Takibi</a>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="menu-button" type="button" aria-label="Menüyü aç">☰</button>
+        <a class="brand" href="#dashboard" data-view="dashboard">
+          <span class="brand-heart">♡</span>
+          <span>Düğün Platformu</span>
+        </a>
+        <nav class="top-nav" aria-label="Üst menü">
+          <a href="#dashboard" data-view="dashboard">Ana Sayfa</a>
+          <a href="#reservations" data-view="reservations">Tüm Rezervasyonlar</a>
+          <a href="#reports" data-view="reports">Raporlar</a>
+        </nav>
+        <div class="top-actions">
+          <button class="credit-pill" type="button">▱ 5.000</button>
+          <button class="icon-button" type="button" aria-label="Mesajlar">▢</button>
+          <button class="icon-button" type="button" aria-label="Profil">♙</button>
+        </div>
+      </header>
+
+      <main class="content">
+        <section id="view-root" aria-live="polite"></section>
+      </main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js?v=20260517-management-edit"></script>
+</body>
+</html>
