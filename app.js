@@ -220,6 +220,7 @@ function normalizeState() {
   assignTenantIds();
   ensureTenantDemoReservations();
   markTenantDemoReservations();
+  ensureLastYearComparisonReservations();
   saveState();
 }
 
@@ -328,17 +329,18 @@ function ensureDemoReservations() {
 }
 
 function ensureDemoData() {
-  if (state.demoDataVersion === 2) return;
-  ensureByValue("organizationTypes", demoSeed.organizationTypes);
-  ensureByName("halls", demoSeed.halls);
-  ensureByName("packages", demoSeed.packages);
-  ensureByName("extras", demoSeed.extras);
-  ensureByValue("menuCategories", demoSeed.menuCategories);
-  ensureByName("menus", demoSeed.menus);
-  ensureDemoReservations();
-  state.reportStart = `${state.year}-01-01`;
-  state.reportEnd = `${state.year}-12-31`;
-  state.demoDataVersion = 2;
+  if (state.demoDataVersion < 2 || !state.demoDataVersion) {
+    ensureByValue("organizationTypes", demoSeed.organizationTypes);
+    ensureByName("halls", demoSeed.halls);
+    ensureByName("packages", demoSeed.packages);
+    ensureByName("extras", demoSeed.extras);
+    ensureByValue("menuCategories", demoSeed.menuCategories);
+    ensureByName("menus", demoSeed.menus);
+    ensureDemoReservations();
+  }
+  state.reportStart = state.reportStart || `${state.year}-01-01`;
+  state.reportEnd = state.reportEnd || `${state.year}-12-31`;
+  state.demoDataVersion = Math.max(Number(state.demoDataVersion || 0), 3);
 }
 
 function ensureTenantDemoReservations() {
@@ -396,22 +398,258 @@ function ensureTenantDemoReservations() {
       status: "canli_gorusme",
       extras: ["Kına Tahtı ve Bindallı Seti"],
       menus: ["Düğün Çorbası", "Tavuk Şiş", "Düğün Pastası Dilimi"]
+    },
+    {
+      brideName: "Ayşe",
+      groomName: "Emre",
+      couple: "Ayşe ve Emre",
+      phone: "0533 620 4455",
+      date: "2026-07-19",
+      contractDate: "2026-04-10",
+      type: "dugun",
+      hallName: "Lavanta Kır Bahçesi",
+      packageName: "Kır Düğünü Premium Paket",
+      guests: 510,
+      total: 605200,
+      cost: 382000,
+      paid: 140000,
+      status: "sozlesme",
+      extras: ["Fotoğraf & Video Ekibi", "Canlı Müzik Ekibi", "Gelin Yolu Çiçek Dekoru"],
+      menus: ["Düğün Çorbası", "Izgara Köfte", "Düğün Pastası Dilimi", "Limitsiz Meşrubat"]
+    },
+    {
+      brideName: "Burcu",
+      groomName: "Kaan",
+      couple: "Burcu ve Kaan",
+      phone: "0532 414 7788",
+      date: "2026-12-06",
+      contractDate: "2026-07-16",
+      type: "dugun",
+      hallName: "Safir Balo Salonu",
+      packageName: "Düğün Gold Paket",
+      guests: 560,
+      total: 548500,
+      cost: 337000,
+      paid: 180000,
+      status: "sozlesme",
+      extras: ["Fotoğraf & Video Ekibi", "Drone Çekimi", "Canlı Müzik Ekibi"],
+      menus: ["Ordövr Tabağı", "Et Kavurma Pilav", "Fıstıklı Baklava", "Limitsiz Meşrubat"]
+    },
+    {
+      brideName: "Mina",
+      groomName: "Alp",
+      couple: "Mina ve Alp",
+      phone: "0533 508 1199",
+      date: "2026-04-26",
+      contractDate: "2026-01-28",
+      type: "dugun",
+      hallName: "Lavanta Kır Bahçesi",
+      packageName: "Kır Düğünü Premium Paket",
+      guests: 440,
+      total: 556800,
+      cost: 348000,
+      paid: 120000,
+      status: "kapora_alindi",
+      extras: ["Fotoğraf & Video Ekibi", "Gelin Yolu Çiçek Dekoru"],
+      menus: ["Düğün Çorbası", "Tavuk Şiş", "Düğün Pastası Dilimi", "Limitsiz Meşrubat"]
+    },
+    {
+      brideName: "Seda",
+      groomName: "Okan",
+      couple: "Seda ve Okan",
+      phone: "0532 880 4411",
+      date: "2026-05-24",
+      contractDate: "2026-02-20",
+      type: "nisan",
+      hallName: "Lale Teras Davet",
+      packageName: "Nişan Zarafet Paketi",
+      guests: 145,
+      total: 153700,
+      cost: 91000,
+      paid: 50000,
+      status: "kapora_alindi",
+      extras: ["Nişan Masası Premium Dekor", "Fotoğraf & Video Ekibi"],
+      menus: ["Ordövr Tabağı", "Peynirli Sigara Böreği", "Düğün Pastası Dilimi", "Limitsiz Meşrubat"]
+    },
+    {
+      brideName: "Ece",
+      groomName: "Tolga",
+      couple: "Ece ve Tolga",
+      phone: "0537 771 2233",
+      date: "2026-10-11",
+      contractDate: "2026-06-18",
+      type: "kina",
+      hallName: "Safir Balo Salonu",
+      packageName: "Kına Gecesi Paket",
+      guests: 310,
+      total: 268400,
+      cost: 161000,
+      paid: 85000,
+      status: "sozlesme",
+      extras: ["Kına Tahtı ve Bindallı Seti", "Canlı Müzik Ekibi"],
+      menus: ["Ordövr Tabağı", "Tavuk Şiş", "Fıstıklı Baklava", "Limitsiz Meşrubat"]
+    },
+    {
+      brideName: "Nazlı",
+      groomName: "Kerem",
+      couple: "Nazlı ve Kerem",
+      phone: "0536 770 1122",
+      date: "2026-09-26",
+      contractDate: "2026-05-28",
+      type: "soz",
+      hallName: "Lale Teras Davet",
+      packageName: "Söz ve Nikah Paketi",
+      guests: 95,
+      total: 88200,
+      cost: 52000,
+      paid: 30000,
+      status: "kapora_alindi",
+      extras: ["Nişan Masası Premium Dekor"],
+      menus: ["Ordövr Tabağı", "Fıstıklı Baklava", "Limitsiz Meşrubat"]
+    },
+    {
+      brideName: "Deniz",
+      groomName: "Ailesi",
+      couple: "Deniz Sünnet Düğünü",
+      phone: "0537 442 1188",
+      date: "2026-07-04",
+      contractDate: "2026-03-22",
+      type: "sunnet_dugunu",
+      hallName: "Lavanta Kır Bahçesi",
+      packageName: "Sünnet Düğünü Paket",
+      guests: 300,
+      total: 250500,
+      cost: 156000,
+      paid: 50000,
+      status: "kapora_alindi",
+      extras: ["Sünnet Tahtı Dekoru"],
+      menus: ["Çocuk Burger Menü", "Tavuk Şiş", "Düğün Pastası Dilimi", "Limitsiz Meşrubat"]
+    },
+    {
+      brideName: "Yılmaz",
+      groomName: "Ailesi",
+      couple: "Yılmaz Ailesi Mevlit",
+      phone: "0538 150 3344",
+      date: "2026-11-08",
+      contractDate: "2026-06-01",
+      type: "mevlit",
+      hallName: "Lale Teras Davet",
+      packageName: "Mevlit İkram Paketi",
+      guests: 220,
+      total: 95500,
+      cost: 56500,
+      paid: 30000,
+      status: "sozlesme",
+      extras: ["Mevlit Lokma Arabası"],
+      menus: ["Pilav Ayran İkramı", "Lokma Tatlısı"]
+    },
+    {
+      brideName: "Güneş Koleji",
+      groomName: "Mezuniyet",
+      couple: "Güneş Koleji Mezuniyet",
+      phone: "0539 600 7788",
+      date: "2026-06-28",
+      contractDate: "2026-04-29",
+      type: "mezuniyet",
+      hallName: "Safir Balo Salonu",
+      packageName: "Mezuniyet Kokteyl Paketi",
+      guests: 380,
+      total: 239700,
+      cost: 141000,
+      paid: 80000,
+      status: "kapora_alindi",
+      extras: ["Mezuniyet Sahne Işık Paketi"],
+      menus: ["Peynirli Sigara Böreği", "Çocuk Burger Menü", "Limitsiz Meşrubat"]
+    },
+    {
+      brideName: "İrem",
+      groomName: "Bora",
+      couple: "İrem ve Bora",
+      phone: "0532 915 6677",
+      date: "2026-03-30",
+      contractDate: "2026-01-18",
+      type: "soz",
+      hallName: "Safir Balo Salonu",
+      packageName: "Söz ve Nikah Paketi",
+      guests: 130,
+      total: 111800,
+      cost: 65500,
+      paid: 42000,
+      status: "sozlesme",
+      extras: ["Fotoğraf & Video Ekibi", "Nişan Masası Premium Dekor"],
+      menus: ["Ordövr Tabağı", "Peynirli Sigara Böreği", "Fıstıklı Baklava", "Limitsiz Meşrubat"]
+    },
+    {
+      brideName: "Atlas",
+      groomName: "Ailesi",
+      couple: "Atlas Sünnet Düğünü",
+      phone: "0534 810 2244",
+      date: "2026-08-22",
+      contractDate: "2026-04-14",
+      type: "sunnet_dugunu",
+      hallName: "Lale Teras Davet",
+      packageName: "Sünnet Düğünü Paket",
+      guests: 240,
+      total: 218000,
+      cost: 131500,
+      paid: 70000,
+      status: "kapora_alindi",
+      extras: ["Sünnet Tahtı Dekoru", "Fotoğraf & Video Ekibi"],
+      menus: ["Çocuk Burger Menü", "Izgara Köfte", "Düğün Pastası Dilimi", "Limitsiz Meşrubat"]
+    },
+    {
+      brideName: "Kaya",
+      groomName: "Ailesi",
+      couple: "Kaya Ailesi Mevlit",
+      phone: "0535 228 9090",
+      date: "2026-02-16",
+      contractDate: "2026-01-06",
+      type: "mevlit",
+      hallName: "Lavanta Kır Bahçesi",
+      packageName: "Mevlit İkram Paketi",
+      guests: 180,
+      total: 81200,
+      cost: 48200,
+      paid: 25000,
+      status: "canli_gorusme",
+      extras: ["Mevlit Lokma Arabası"],
+      menus: ["Pilav Ayran İkramı", "Lokma Tatlısı", "Limitsiz Meşrubat"]
+    },
+    {
+      brideName: "Mavi Anadolu Lisesi",
+      groomName: "Mezuniyet",
+      couple: "Mavi Anadolu Mezuniyet",
+      phone: "0536 550 7070",
+      date: "2026-06-12",
+      contractDate: "2026-03-09",
+      type: "mezuniyet",
+      hallName: "Safir Balo Salonu",
+      packageName: "Mezuniyet Kokteyl Paketi",
+      guests: 430,
+      total: 268400,
+      cost: 158500,
+      paid: 95000,
+      status: "sozlesme",
+      extras: ["Mezuniyet Sahne Işık Paketi", "Canlı Müzik Ekibi"],
+      menus: ["Peynirli Sigara Böreği", "Ordövr Tabağı", "Çocuk Burger Menü", "Limitsiz Meşrubat"]
     }
   ];
 
   state.tenants.forEach((tenant, index) => {
-    const hasReservation = state.reservations.some(item => item.tenantId === tenant.id);
-    if (hasReservation) return;
-    const first = samples[index % samples.length];
-    const second = samples[(index + 1) % samples.length];
-    [first, second].forEach((sample, sampleIndex) => {
+    const orderedSamples = samples.map((_, sampleIndex) => samples[(sampleIndex + index) % samples.length]);
+    orderedSamples.forEach(sample => {
+      const exists = state.reservations.some(item =>
+        item.tenantId === tenant.id &&
+        item.demoReservation &&
+        sameText(item.couple, `${sample.couple} - ${tenant.name}`)
+      );
+      if (exists) return;
       state.reservations.push({
         id: makeId(),
         ...sample,
         couple: `${sample.couple} - ${tenant.name}`,
         tenantId: tenant.id,
         demoReservation: true,
-        date: sampleIndex === 0 ? sample.date : sample.date.replace("-09-", "-10-"),
         createdAt: new Date().toLocaleString("tr-TR")
       });
     });
@@ -425,6 +663,49 @@ function markTenantDemoReservations() {
       return String(reservation.couple || "").includes(` - ${tenant.name}`)
         ? { ...reservation, demoReservation: true }
         : reservation;
+    });
+  });
+}
+
+function previousYearDate(value) {
+  if (!value) return "";
+  const date = new Date(`${value}T00:00:00`);
+  date.setFullYear(date.getFullYear() - 1);
+  return localDateValue(date);
+}
+
+function comparisonAmount(value, index, minimum = 0) {
+  const ratio = [0.82, 0.87, 0.91, 0.78][index % 4];
+  return Math.max(minimum, Math.round(Number(value || 0) * ratio));
+}
+
+function ensureLastYearComparisonReservations() {
+  const currentYear = Number(state.year || new Date().getFullYear());
+  const sourceReservations = state.reservations.filter(item => {
+    if (item.comparisonDemoReservation) return false;
+    if (!String(item.date || "").startsWith(`${currentYear}-`)) return false;
+    return item.demoReservation || demoSeed.reservations.some(seedItem => sameText(seedItem.couple, item.couple));
+  });
+
+  sourceReservations.forEach((item, index) => {
+    const date = previousYearDate(item.date);
+    const exists = state.reservations.some(row => sameText(row.couple, item.couple) && row.date === date);
+    if (exists) return;
+    const total = comparisonAmount(item.total, index);
+    const cost = comparisonAmount(item.cost, index, 0);
+    const paid = Math.min(total, comparisonAmount(item.paid, index, 0));
+    state.reservations.push({
+      ...item,
+      id: makeId(),
+      date,
+      contractDate: previousYearDate(item.contractDate),
+      total,
+      cost,
+      paid,
+      status: item.status || "sozlesme",
+      demoReservation: true,
+      comparisonDemoReservation: true,
+      createdAt: `Geçen yıl örnek kayıt ${index + 1}`
     });
   });
 }
@@ -1042,29 +1323,94 @@ function filteredReportReservations(activeReport, range) {
 }
 
 function summarizeReservations(reservations) {
-  return reservations.reduce((acc, item) => {
+  const totals = reservations.reduce((acc, item) => {
     acc.revenue += Number(item.total || 0);
     acc.cost += Number(item.cost || 0);
     acc.paid += Number(item.paid || 0);
     acc.guests += Number(item.guests || 0);
+    acc.count += 1;
     return acc;
-  }, { revenue: 0, cost: 0, paid: 0, guests: 0 });
+  }, { count: 0, revenue: 0, cost: 0, paid: 0, guests: 0 });
+  totals.profit = totals.revenue - totals.cost;
+  totals.remaining = totals.revenue - totals.paid;
+  totals.averageSale = totals.count ? Math.round(totals.revenue / totals.count) : 0;
+  return totals;
+}
+
+function percentChange(current, previous) {
+  if (!previous) return current ? "Yeni veri" : "Fark yok";
+  const percent = Math.round(((current - previous) / previous) * 100);
+  return `${percent > 0 ? "+" : ""}%${percent}`;
+}
+
+function formatMetric(value, type = "money") {
+  if (type === "count") return value;
+  if (type === "guest") return `${value} kişi`;
+  return money(value);
+}
+
+function comparisonMetricCard(label, current, previous, type = "money") {
+  const diff = current - previous;
+  const good = diff >= 0;
+  return `
+    <article class="comparison-card ${good ? "positive" : "negative"}">
+      <span>${label}</span>
+      <strong>${formatMetric(current, type)}</strong>
+      <div class="comparison-lines">
+        <small>Geçen dönem: ${formatMetric(previous, type)}</small>
+        <em class="${good ? "profit" : "danger-text"}">Fark: ${formatMetric(diff, type)} · ${percentChange(current, previous)}</em>
+      </div>
+    </article>
+  `;
+}
+
+function comparisonChartRow(label, current, previous, type = "money") {
+  const max = Math.max(Math.abs(current), Math.abs(previous), 1);
+  const currentWidth = Math.max(4, Math.round((Math.abs(current) / max) * 100));
+  const previousWidth = Math.max(4, Math.round((Math.abs(previous) / max) * 100));
+  return `
+    <div class="comparison-chart-row">
+      <div class="comparison-chart-label">${label}</div>
+      <div class="comparison-chart-bars">
+        <div class="chart-line current"><span style="width:${currentWidth}%"></span><strong>Bu dönem ${formatMetric(current, type)}</strong></div>
+        <div class="chart-line previous"><span style="width:${previousWidth}%"></span><strong>Geçen dönem ${formatMetric(previous, type)}</strong></div>
+      </div>
+    </div>
+  `;
 }
 
 function comparisonMarkup(currentReservations, comparisonReservations, comparisonLabel) {
   if (!comparisonLabel) return "";
   const current = summarizeReservations(currentReservations);
   const previous = summarizeReservations(comparisonReservations);
-  const diff = current.revenue - previous.revenue;
-  const percent = previous.revenue ? Math.round((diff / previous.revenue) * 100) : null;
+  const chartRows = [
+    ["Rezervasyon Adedi", current.count, previous.count, "count"],
+    ["Satış Tutarı", current.revenue, previous.revenue, "money"],
+    ["Masraf", current.cost, previous.cost, "money"],
+    ["Net Kar", current.profit, previous.profit, "money"],
+    ["Tahsilat", current.paid, previous.paid, "money"]
+  ];
   return `
     <section class="panel comparison-panel">
-      <h2>${comparisonLabel} Karşılaştırması</h2>
+      <div class="comparison-head">
+        <div>
+          <h2>${comparisonLabel} Karşılaştırması</h2>
+          <p>Seçili filtre ve tarih aralığına göre bu dönem ile geçmiş dönem aynı kırılımda kıyaslanır.</p>
+        </div>
+      </div>
       <div class="comparison-grid">
-        ${statCard("Bu Dönem Ciro", money(current.revenue), "$", "green", `${currentReservations.length} rezervasyon`)}
-        ${statCard("Karşılaştırılan Ciro", money(previous.revenue), "$", "blue", `${comparisonReservations.length} rezervasyon`)}
-        ${statCard("Ciro Farkı", money(diff), "↕", diff >= 0 ? "green" : "red", percent === null ? "Önceki veri yok" : `%${percent}`)}
-        ${statCard("Tahsilat Farkı", money(current.paid - previous.paid), "□", current.paid >= previous.paid ? "green" : "red")}
+        ${comparisonMetricCard("Rezervasyon Sayısı", current.count, previous.count, "count")}
+        ${comparisonMetricCard("Satış Tutarı", current.revenue, previous.revenue)}
+        ${comparisonMetricCard("Masraf", current.cost, previous.cost)}
+        ${comparisonMetricCard("Net Kar", current.profit, previous.profit)}
+        ${comparisonMetricCard("Tahsilat", current.paid, previous.paid)}
+        ${comparisonMetricCard("Kalan Alacak", current.remaining, previous.remaining)}
+        ${comparisonMetricCard("Konuk Sayısı", current.guests, previous.guests, "guest")}
+        ${comparisonMetricCard("Ortalama Satış", current.averageSale, previous.averageSale)}
+      </div>
+      <div class="comparison-chart">
+        <h3>Grafik Karşılaştırma</h3>
+        ${chartRows.map(row => comparisonChartRow(...row)).join("")}
       </div>
     </section>
   `;
@@ -1120,6 +1466,197 @@ function reportRowsTable(title, rows, labelTitle = "Başlık") {
       ])) : empty("Bu tarih aralığında rapor verisi yok")}
     </section>
   `;
+}
+
+function reportSelectionTitle(activeReport) {
+  const config = reportFilterConfig(activeReport);
+  if (!config || !state.reportFilterValue) return "Tüm kayıtlar";
+  return config.options.find(option => option.value === state.reportFilterValue)?.name || state.reportFilterValue;
+}
+
+function topRow(rows, fallback = "Veri yok") {
+  return rows.length ? rows[0] : { label: fallback, count: 0, guests: 0, revenue: 0, cost: 0, paid: 0 };
+}
+
+function reportHighlights(reservations) {
+  return {
+    type: topRow(reportGroupRows(reservations, item => item.type, item => typeName(item.type)), "Organizasyon yok"),
+    hall: topRow(reportGroupRows(reservations, item => item.hallName, item => item.hallName || "Salon yok"), "Salon yok"),
+    package: topRow(reportGroupRows(reservations, item => item.packageName, item => item.packageName || "Paket yok"), "Paket yok"),
+    extra: topRow(reportLineItemRows(reservations, "extras"), "Ekstra yok"),
+    menu: topRow(reportLineItemRows(reservations, "menus", true), "Menü yok")
+  };
+}
+
+function executiveSummaryMarkup(totals, selectionTitle) {
+  return `
+    <section class="executive-summary">
+      <article><span>Seçili Rapor</span><strong>${selectionTitle}</strong></article>
+      <article><span>Rezervasyon</span><strong>${totals.count}</strong></article>
+      <article><span>Ciro</span><strong>${money(totals.revenue)}</strong></article>
+      <article><span>Tahsilat</span><strong>${money(totals.paid)}</strong></article>
+      <article><span>Kalan Alacak</span><strong>${money(totals.remaining)}</strong></article>
+      <article><span>Net Kar</span><strong>${money(totals.profit)}</strong></article>
+    </section>
+  `;
+}
+
+function smartInsightsMarkup(current, previous, reservations) {
+  const paymentRate = current.revenue ? Math.round((current.paid / current.revenue) * 100) : 0;
+  const profitRate = current.revenue ? Math.round((current.profit / current.revenue) * 100) : 0;
+  const revenueChange = previous ? percentChange(current.revenue, previous.revenue) : "Karşılaştırma seçilmedi";
+  const remainingHigh = current.remaining > current.paid;
+  const insights = [
+    { title: "Ciro Eğilimi", text: previous ? `Seçili raporda satış ${revenueChange} değişti.` : "Geçen yıl karşılaştırması açılırsa eğilim analizi görünür.", tone: previous && current.revenue >= previous.revenue ? "positive" : "neutral" },
+    { title: "Tahsilat Durumu", text: `Tahsilat oranı %${paymentRate}. Kalan alacak ${money(current.remaining)}.`, tone: remainingHigh ? "warning" : "positive" },
+    { title: "Karlılık", text: `Net kar oranı %${profitRate}. Ortalama satış ${money(current.averageSale)}.`, tone: profitRate >= 35 ? "positive" : "warning" },
+    { title: "Operasyon Hacmi", text: `${current.guests} konuk ve ${reservations.length} rezervasyon yönetiliyor.`, tone: "neutral" }
+  ];
+  return `
+    <section class="panel insight-panel">
+      <h2>Akıllı Özet</h2>
+      <div class="insight-grid">
+        ${insights.map(item => `<article class="${item.tone}"><strong>${item.title}</strong><span>${item.text}</span></article>`).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function topEarnersMarkup(reservations) {
+  const highlights = reportHighlights(reservations);
+  const cards = [
+    ["En Karlı Organizasyon", highlights.type],
+    ["En Çok Kazandıran Salon", highlights.hall],
+    ["En Çok Satan Paket", highlights.package],
+    ["En Güçlü Ekstra", highlights.extra],
+    ["En Güçlü Menü", highlights.menu]
+  ];
+  return `
+    <section class="panel top-earners-panel">
+      <h2>En Çok Kazandıranlar</h2>
+      <div class="top-earners-grid">
+        ${cards.map(([title, item]) => `
+          <article>
+            <span>${title}</span>
+            <strong>${item.label}</strong>
+            <small>${item.count} adet · ${money(item.revenue)} ciro · ${money(item.revenue - item.cost)} kar</small>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function monthlyReportRows(reservations) {
+  const rows = Array.from({ length: 12 }, (_, month) => ({
+    month,
+    label: new Date(state.year, month, 1).toLocaleDateString("tr-TR", { month: "long" }),
+    count: 0,
+    revenue: 0,
+    cost: 0,
+    paid: 0
+  }));
+  reservations.forEach(item => {
+    const month = Number(String(item.date || "").slice(5, 7)) - 1;
+    if (!rows[month]) return;
+    rows[month].count += 1;
+    rows[month].revenue += Number(item.total || 0);
+    rows[month].cost += Number(item.cost || 0);
+    rows[month].paid += Number(item.paid || 0);
+  });
+  return rows;
+}
+
+function monthlyChartMarkup(reservations) {
+  const rows = monthlyReportRows(reservations);
+  const max = Math.max(...rows.map(row => row.revenue), 1);
+  return `
+    <section class="panel monthly-panel">
+      <h2>Aylık Ciro ve Kar Grafiği</h2>
+      <div class="monthly-chart">
+        ${rows.map(row => {
+          const revenueHeight = Math.max(5, Math.round((row.revenue / max) * 100));
+          const profit = row.revenue - row.cost;
+          const profitHeight = Math.max(5, Math.round((Math.max(profit, 0) / max) * 100));
+          return `
+            <article>
+              <div class="month-bars">
+                <span class="revenue" style="height:${revenueHeight}%"></span>
+                <span class="profit-bar" style="height:${profitHeight}%"></span>
+              </div>
+              <strong>${row.label.slice(0, 3)}</strong>
+              <small>${row.count} kayıt</small>
+            </article>
+          `;
+        }).join("")}
+      </div>
+      <div class="chart-legend"><span class="revenue"></span> Ciro <span class="profit-bar"></span> Net kar</div>
+    </section>
+  `;
+}
+
+function collectionReportMarkup(reservations, totals) {
+  const risky = reservations
+    .filter(item => Number(item.total || 0) - Number(item.paid || 0) > 0)
+    .sort((a, b) => (Number(b.total || 0) - Number(b.paid || 0)) - (Number(a.total || 0) - Number(a.paid || 0)))
+    .slice(0, 5);
+  return `
+    <section class="panel collection-panel">
+      <h2>Tahsilat Raporu</h2>
+      <div class="collection-grid">
+        <article><span>Toplam Alacak</span><strong>${money(totals.remaining)}</strong></article>
+        <article><span>Tahsilat Oranı</span><strong>%${totals.revenue ? Math.round((totals.paid / totals.revenue) * 100) : 0}</strong></article>
+        <article><span>Kapora / Tahsilat</span><strong>${money(totals.paid)}</strong></article>
+      </div>
+      ${risky.length ? table(["Rezervasyon", "Tarih", "Toplam", "Tahsilat", "Kalan"], risky.map(item => [
+        `<strong>${item.couple}</strong>`,
+        new Date(item.date).toLocaleDateString("tr-TR"),
+        money(item.total),
+        money(item.paid),
+        `<span class="danger-text">${money(Number(item.total || 0) - Number(item.paid || 0))}</span>`
+      ])) : empty("Kalan alacak yok", "Seçili raporda tüm tahsilatlar tamamlanmış görünüyor.")}
+    </section>
+  `;
+}
+
+function csvCell(value) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+function exportReportCsv() {
+  const range = getReportRange();
+  const activeReport = state.activeView?.startsWith("report") ? state.activeView : "reports";
+  const reservations = filteredReportReservations(activeReport, range);
+  const rows = [
+    ["Tarih", "Rezervasyon", "Tür", "Salon", "Paket", "Konuk", "Toplam", "Masraf", "Tahsilat", "Kalan", "Net Kar"],
+    ...reservations
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(item => [
+        item.date,
+        item.couple,
+        typeName(item.type),
+        item.hallName || "",
+        item.packageName || "",
+        item.guests || 0,
+        item.total || 0,
+        item.cost || 0,
+        item.paid || 0,
+        Number(item.total || 0) - Number(item.paid || 0),
+        Number(item.total || 0) - Number(item.cost || 0)
+      ])
+  ];
+  const csv = `\uFEFF${rows.map(row => row.map(csvCell).join(";")).join("\n")}`;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `dugun-platformu-rapor-${range.start}-${range.end}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showToast("Excel raporu indirildi");
 }
 
 function renderReportDetail(activeReport, reservations, totals) {
@@ -1190,9 +1727,17 @@ function renderReports() {
     ? "Geçen Yıl"
     : state.reportCompareMode === "sameMonthLastYear" ? "Geçen Yıl Aynı Tarih Aralığı" : "";
   const totals = summarizeReservations(reportReservations);
+  const comparisonTotals = comparisonReservations.length ? summarizeReservations(comparisonReservations) : null;
   const profit = totals.revenue - totals.cost;
+  const selectionTitle = reportSelectionTitle(activeReport);
   root.innerHTML = `
-    <h1 class="report-title">Detaylı Raporlar</h1>
+    <div class="report-heading">
+      <h1 class="report-title">Detaylı Raporlar</h1>
+      <div class="report-actions">
+        <button class="btn secondary" type="button" data-action="exportReportCsv">Excel'e Aktar</button>
+        <button class="btn secondary" type="button" data-action="printReport">PDF / Yazdır</button>
+      </div>
+    </div>
     <div class="panel">
       <div class="filters">
         <div class="field"><label>Başlangıç Tarihi</label><input id="reportStart" type="date" value="${range.start}"></div>
@@ -1202,6 +1747,7 @@ function renderReports() {
       </div>
       ${filterConfig ? `<div class="filters report-specific-filter"><div class="field"><label>${filterConfig.label} Seçimi</label><select id="reportFilterValue"><option value="">${filterConfig.all}</option>${filterConfig.options.map(option => `<option value="${attr(option.value)}" ${state.reportFilterValue === option.value ? "selected" : ""}>${option.name}</option>`).join("")}</select></div></div>` : ""}
     </div>
+    ${executiveSummaryMarkup(totals, selectionTitle)}
     <div class="tabs">
       ${Object.entries(tabLabels).map(([view, label]) => `<button class="tab ${activeReport === view ? "active" : ""}" data-view="${view}">${label}</button>`).join("")}
     </div>
@@ -1211,7 +1757,11 @@ function renderReports() {
       ${statCard("Toplam Maliyet", money(totals.cost), "⌄", "orange")}
       ${statCard("Toplam Kar", money(profit), "↗", "violet", `Kar Oranı: %${totals.revenue ? Math.round((profit / totals.revenue) * 100) : 0}`)}
     </div>
+    ${smartInsightsMarkup(totals, comparisonTotals, reportReservations)}
     ${comparisonMarkup(reportReservations, comparisonReservations, comparisonLabel)}
+    ${monthlyChartMarkup(reportReservations)}
+    ${topEarnersMarkup(reportReservations)}
+    ${collectionReportMarkup(reportReservations, totals)}
     ${renderReportDetail(activeReport, reportReservations, totals)}
   `;
 }
@@ -1920,6 +2470,14 @@ document.addEventListener("click", event => {
 
   const action = event.target.closest("[data-action]")?.dataset.action;
   const actionEl = event.target.closest("[data-action]");
+  if (action === "exportReportCsv") {
+    exportReportCsv();
+    return;
+  }
+  if (action === "printReport") {
+    window.print();
+    return;
+  }
   if (action === "prevYear") state.year -= 1;
   if (action === "nextYear") state.year += 1;
   if (action === "thisYear") state.year = new Date().getFullYear();

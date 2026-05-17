@@ -93,6 +93,15 @@ Raporlar bolumunde daha detayli secim ve karsilastirma baslatildi:
 - Ekstralar raporunda tek bir ekstra urun/hizmet secilebilir.
 - Menuler raporunda tek bir yemek menusu secilebilir.
 - Bu filtreler seciliyken ustteki toplamlar ve karsilastirma kartlari ayni secime gore hesaplanir.
+- Karsilastirma testleri icin her mekanin demo rezervasyonlarina gecen yil karsiliklari otomatik eklenir.
+- Demo mekanlarda dugun, nisan ve kina kayitlari birlikte tutulur; boylece organizasyon turu karsilastirmasi bos kalmaz.
+- Karsilastirma paneli rezervasyon adedi, satis tutari, masraf, net kar, tahsilat, kalan alacak, konuk sayisi ve ortalama satisi birlikte gosterir.
+- Karsilastirma kartlarinin altina bu donem/gecen donem cubuk grafik karsilastirmasi eklendi.
+- Demo veri seti genisletildi: her mekan icin dugun, nisan, kina, soz, sunnet, mevlit ve mezuniyet gibi farkli organizasyonlardan birden fazla ornek kayit olusturulur.
+- Paket raporlarini daha gercekci test etmek icin her demo paketinden en az 2 rezervasyon olusacak sekilde ornekler tamamlandi.
+- Genisletilen demo kayitlarin gecen yil karsiliklari da otomatik eklenir; boylece rapor filtreleri ve grafik karsilastirmalari daha gercekci test edilir.
+- Rapor ekranina mekan sahibi icin ust yonetici ozeti, akilli ozet/uyarilar, en cok kazandiranlar, aylik ciro-kar grafigi ve tahsilat raporu eklendi.
+- Rapor ekranina Excel'e aktar ve PDF/Yazdir butonlari eklendi. Excel cikisi secili tarih ve filtreye gore CSV dosyasi indirir; PDF icin tarayici yazdirma ekrani acilir.
 
 ## GitHub baglantisi
 
