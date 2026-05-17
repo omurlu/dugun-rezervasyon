@@ -35,6 +35,19 @@ Bu degisiklikler bilgisayardaki proje dosyalarina kaydedildi.
 
 GitHub notu: Bu bilgisayardaki `.git` klasoru yazma izni vermedigi icin bu parcanin GitHub'a normal Git ile gonderimi tamamlanamadi. Kodlar yerelde guvende; GitHub senkronu icin Git kurulumu/izin duzeltmesi gerekir.
 
+## GitHub Dal Takibi
+
+Git kurulumu ve GitHub girisi tamamlandi. Ilk calisma GitHub'a su dal olarak gonderildi:
+
+`codex/mekan-hesaplari`
+
+Takip karari:
+
+- Gelistirmelere bir sure `codex/mekan-hesaplari` dali uzerinden devam edilecek.
+- Bu dal ana siteyi bozmadan gelistirme alani olarak kullanilacak.
+- Mekan hesaplari, ana admin ve mekan paneli yapisi oturunca bu dal `main` ile birlestirilecek.
+- Kullanici "ne zaman dersen birlestiririz" dedi; birlestirme zamanini Codex uygun noktada onerecek.
+
 ## GitHub baglantisi
 
 GitHub deposu olarak su adres not edildi:
