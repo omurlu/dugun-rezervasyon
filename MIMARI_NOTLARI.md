@@ -6,6 +6,28 @@ Bu proje tek bir dugun salonu icin degil, `dugunyolu.tr` altinda birden fazla du
 
 Her dugun salonu kendi kullanici adi ve sifresiyle giris yapar. Giris yapan salon sadece kendi verilerini gorur, duzenler ve raporlar. Bir salonun rezervasyonu, tedarikcisi, personeli, stogu, SMS sablonu veya finans kaydi baska bir salon tarafindan gorulmez.
 
+## Is Modeli
+
+Sistemin sahibi ana admin olacak. Ana admin, dugun mekanlarini musteri olarak sisteme ekleyecek ve her mekan icin ayri bir kullanici adi/sifre olusturacak.
+
+Her mekan kendisine verilen bilgilerle kendi paneline giris yapacak. Mekan panelinde kendi isletmesine ait:
+
+- Rezervasyonlari girer ve takip eder.
+- Raporlarini anlik gorur.
+- Otomatik SMS ayarlarini ve sablonlarini yonetir.
+- Kapora, taksit, odeme ve gider gibi kucuk muhasebe kayitlarini tutar.
+- Personel, tedarikci, stok, paket, ekstra ve menu bilgilerini yonetir.
+
+Ana admin paneli ise mekanlarin uzerinde duran platform yonetim alani olacak. Ana admin:
+
+- Yeni mekan/musteri hesabi acar.
+- Mekan kullanici adi ve sifresini belirler.
+- Mekanin aktif/pasif durumunu yonetir.
+- Gerekirse mekanin paneline destek amacli bakabilir.
+- Tum platformun genel durumunu ve musteri hesaplarini takip eder.
+
+Kritik kural: Bir mekan, baska bir mekanin rezervasyonunu, muhasebesini, raporunu, SMS ayarini veya musteri bilgisini kesinlikle gormeyecek.
+
 ## Kullanici Tipleri
 
 - Platform sahibi: Tum salon hesaplarini ve sistem ayarlarini yonetir.
