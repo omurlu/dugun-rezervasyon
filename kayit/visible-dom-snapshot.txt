@@ -1,0 +1,174 @@
+- complementary "Ana menü":
+  - link "⌂ Ana Sayfa":
+    - /url: "#dashboard"
+    - generic: ⌂
+    - generic: Ana Sayfa
+  - link "☰ Tüm Rezervasyonlar":
+    - /url: "#reservations"
+    - generic: ☰
+    - generic: Tüm Rezervasyonlar
+  - generic: ⚙
+  - text: Yönetim
+  - generic: ⌃
+  - link "◴ Organizasyon Türleri":
+    - /url: "#types"
+    - generic: ◴
+    - text: Organizasyon Türleri
+  - link "▥ Salonlar":
+    - /url: "#halls"
+    - generic: ▥
+    - text: Salonlar
+  - link "◇ Paketler":
+    - /url: "#packages"
+    - generic: ◇
+    - text: Paketler
+  - link "✦ Ekstra Özel Seçim":
+    - /url: "#extras"
+    - generic: ✦
+    - text: Ekstra Özel Seçim
+  - link "⌑ Menü Kategorileri":
+    - /url: "#menuCategories"
+    - generic: ⌑
+    - text: Menü Kategorileri
+  - link "☷ Yemek Menüsü":
+    - /url: "#menus"
+    - generic: ☷
+    - text: Yemek Menüsü
+  - generic: ▥
+  - text: Raporlar
+  - generic: ⌃
+  - link "▣ Genel Özet":
+    - /url: "#reports"
+    - generic: ▣
+    - text: Genel Özet
+  - link "◴ Organizasyon Türü":
+    - /url: "#reportTypes"
+    - generic: ◴
+    - text: Organizasyon Türü
+  - link "▥ Salon Raporu":
+    - /url: "#reportHalls"
+    - generic: ▥
+    - text: Salon Raporu
+  - link "◇ Paket Raporu":
+    - /url: "#reportPackages"
+    - generic: ◇
+    - text: Paket Raporu
+  - link "✦ Ekstra Raporu":
+    - /url: "#reportExtras"
+    - generic: ✦
+    - text: Ekstra Raporu
+  - link "☷ Menü Raporu":
+    - /url: "#reportMenus"
+    - generic: ☷
+    - text: Menü Raporu
+  - link "✉ SMS Bildirimleri":
+    - /url: "#messages"
+    - generic: ✉
+    - text: SMS Bildirimleri
+  - link "♚ Personel":
+    - /url: "#staff"
+    - generic: ♚
+    - text: Personel
+  - link "▤ Tedarikçi":
+    - /url: "#suppliers"
+    - generic: ▤
+    - text: Tedarikçi
+  - link "▦ Tedarikçi Cari":
+    - /url: "#supplierAccount"
+    - generic: ▦
+    - text: Tedarikçi Cari
+  - link "⬡ Stok Takibi":
+    - /url: "#stock"
+    - generic: ⬡
+    - text: Stok Takibi
+- banner:
+  - link "♡ Düğün Platformu":
+    - /url: "#dashboard"
+    - generic: ♡
+    - generic: Düğün Platformu
+  - navigation "Üst menü":
+    - link "Ana Sayfa":
+      - /url: "#dashboard"
+    - link "Tüm Rezervasyonlar":
+      - /url: "#reservations"
+    - link "Raporlar":
+      - /url: "#reports"
+  - button "▱ 5.000"
+  - button "Mesajlar": ▢
+  - button "Profil": ♙
+- main:
+  - heading "Detaylı Raporlar" [level=1]
+  - generic: Başlangıç Tarihi
+  - textbox: 2026-01-01
+  - generic: Bitiş Tarihi
+  - textbox: 2026-12-31
+  - generic: Hızlı Filtre
+  - button "Bu Ay"
+  - button "Geçen Ay"
+  - button "Bu Yıl"
+  - button "Geçen Yıl"
+  - checkbox "Önceki yıl ile karşılaştır"
+  - text: Önceki yıl ile karşılaştır
+  - button "Genel Özet"
+  - button "Organizasyon Türü"
+  - button "Salonlar"
+  - button "Paketler"
+  - button "Ekstralar"
+  - button "Menüler"
+  - article:
+    - generic: Toplam Rezervasyon
+    - generic: "8"
+    - generic: □
+  - article:
+    - generic: Toplam Ciro
+    - generic: ₺2.244.000
+    - generic: $
+  - article:
+    - generic: Toplam Maliyet
+    - generic: ₺1.377.500
+    - generic: ⌄
+  - article:
+    - generic: Toplam Kar
+    - generic: ₺866.500
+    - generic: "Kar Oranı: %39"
+    - generic: ↗
+  - heading "Salonlara Göre Rapor" [level=2]
+  - table:
+    - rowgroup:
+      - row "Salon Adet Konuk Ciro Maliyet Kar Tahsilat":
+        - columnheader "Salon"
+        - columnheader "Adet"
+        - columnheader "Konuk"
+        - columnheader "Ciro"
+        - columnheader "Maliyet"
+        - columnheader "Kar"
+        - columnheader "Tahsilat"
+    - rowgroup:
+      - row "Safir Balo Salonu 3 1260 ₺1.026.200 ₺626.000 ₺400.200 ₺265.000":
+        - cell "Safir Balo Salonu":
+          - strong: Safir Balo Salonu
+        - cell "3"
+        - cell "1260"
+        - cell "₺1.026.200"
+        - cell "₺626.000"
+        - cell "₺400.200"
+        - cell "₺265.000"
+      - row "Lavanta Kır Bahçesi 2 780 ₺840.100 ₺530.000 ₺310.100 ₺140.000":
+        - cell "Lavanta Kır Bahçesi":
+          - strong: Lavanta Kır Bahçesi
+        - cell "2"
+        - cell "780"
+        - cell "₺840.100"
+        - cell "₺530.000"
+        - cell "₺310.100"
+        - cell "₺140.000"
+      - row "Lale Teras Davet 3 520 ₺377.700 ₺221.500 ₺156.200 ₺100.000":
+        - cell "Lale Teras Davet":
+          - strong: Lale Teras Davet
+        - cell "3"
+        - cell "520"
+        - cell "₺377.700"
+        - cell "₺221.500"
+        - cell "₺156.200"
+        - cell "₺100.000"
+- status: Bu tarihte 1 rezervasyon var. Müsaitlik kontrol edin.

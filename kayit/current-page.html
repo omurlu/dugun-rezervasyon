@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="tr"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Düğün Platformu</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Ana menü">
+      <button class="mobile-close" type="button" aria-label="Menüyü kapat">×</button>
+      <a class="side-primary nav-link" href="#dashboard" data-view="dashboard">
+        <span class="icon">⌂</span>
+        <span>Ana Sayfa</span>
+      </a>
+      <a class="side-link nav-link" href="#reservations" data-view="reservations">
+        <span class="icon">☰</span>
+        <span>Tüm Rezervasyonlar</span>
+      </a>
+
+      <div class="side-group">
+        <div class="side-heading">
+          <span><span class="icon">⚙</span> Yönetim</span>
+          <span>⌃</span>
+        </div>
+        <a class="side-link nav-link" href="#types" data-view="types"><span class="icon">◴</span> Organizasyon Türleri</a>
+        <a class="side-link nav-link" href="#halls" data-view="halls"><span class="icon">▥</span> Salonlar</a>
+        <a class="side-link nav-link" href="#packages" data-view="packages"><span class="icon">◇</span> Paketler</a>
+        <a class="side-link nav-link" href="#extras" data-view="extras"><span class="icon">✦</span> Ekstra Özel Seçim</a>
+        <a class="side-link nav-link" href="#menuCategories" data-view="menuCategories"><span class="icon">⌑</span> Menü Kategorileri</a>
+        <a class="side-link nav-link" href="#menus" data-view="menus"><span class="icon">☷</span> Yemek Menüsü</a>
+      </div>
+
+      <div class="side-group">
+        <div class="side-heading">
+          <span><span class="icon">▥</span> Raporlar</span>
+          <span>⌃</span>
+        </div>
+        <a class="side-link nav-link" href="#reports" data-view="reports"><span class="icon">▣</span> Genel Özet</a>
+        <a class="side-link nav-link" href="#reportTypes" data-view="reportTypes"><span class="icon">◴</span> Organizasyon Türü</a>
+        <a class="side-link nav-link active" href="#reportHalls" data-view="reportHalls"><span class="icon">▥</span> Salon Raporu</a>
+        <a class="side-link nav-link" href="#reportPackages" data-view="reportPackages"><span class="icon">◇</span> Paket Raporu</a>
+        <a class="side-link nav-link" href="#reportExtras" data-view="reportExtras"><span class="icon">✦</span> Ekstra Raporu</a>
+        <a class="side-link nav-link" href="#reportMenus" data-view="reportMenus"><span class="icon">☷</span> Menü Raporu</a>
+      </div>
+
+      <a class="side-link nav-link" href="#messages" data-view="messages"><span class="icon">✉</span> SMS Bildirimleri</a>
+      <a class="side-link nav-link" href="#staff" data-view="staff"><span class="icon">♚</span> Personel</a>
+      <a class="side-link nav-link" href="#suppliers" data-view="suppliers"><span class="icon">▤</span> Tedarikçi</a>
+      <a class="side-link nav-link" href="#supplierAccount" data-view="supplierAccount"><span class="icon">▦</span> Tedarikçi Cari</a>
+      <a class="side-link nav-link" href="#stock" data-view="stock"><span class="icon">⬡</span> Stok Takibi</a>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="menu-button" type="button" aria-label="Menüyü aç">☰</button>
+        <a class="brand" href="#dashboard" data-view="dashboard">
+          <span class="brand-heart">♡</span>
+          <span>Düğün Platformu</span>
+        </a>
+        <nav class="top-nav" aria-label="Üst menü">
+          <a href="#dashboard" data-view="dashboard" class="">Ana Sayfa</a>
+          <a href="#reservations" data-view="reservations" class="">Tüm Rezervasyonlar</a>
+          <a href="#reports" data-view="reports" class="active">Raporlar</a>
+        </nav>
+        <div class="top-actions">
+          <button class="credit-pill" type="button">▱ 5.000</button>
+          <button class="icon-button" type="button" aria-label="Mesajlar">▢</button>
+          <button class="icon-button" type="button" aria-label="Profil">♙</button>
+        </div>
+      </header>
+
+      <main class="content">
+        <section id="view-root" aria-live="polite">
+    <h1 class="report-title">Detaylı Raporlar</h1>
+    <div class="panel">
+      <div class="filters">
+        <div class="field"><label>Başlangıç Tarihi</label><input id="reportStart" type="date" value="2026-01-01"></div>
+        <div class="field"><label>Bitiş Tarihi</label><input id="reportEnd" type="date" value="2026-12-31"></div>
+        <div class="field"><label>Hızlı Filtre</label><div class="quick-filter"><button class="btn secondary" type="button" data-report-range="thisMonth">Bu Ay</button><button class="btn secondary" type="button" data-report-range="lastMonth">Geçen Ay</button><button class="btn secondary" type="button" data-report-range="thisYear">Bu Yıl</button><button class="btn secondary" type="button" data-report-range="lastYear">Geçen Yıl</button></div></div>
+        <label class="check-row flat"><input type="checkbox"> Önceki yıl ile karşılaştır</label>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab " data-view="reports">Genel Özet</button><button class="tab " data-view="reportTypes">Organizasyon Türü</button><button class="tab active" data-view="reportHalls">Salonlar</button><button class="tab " data-view="reportPackages">Paketler</button><button class="tab " data-view="reportExtras">Ekstralar</button><button class="tab " data-view="reportMenus">Menüler</button>
+    </div>
+    <div class="stats-grid">
+      <article class="stat-card blue"><div><div class="stat-label">Toplam Rezervasyon</div><div class="stat-value">8</div></div><div class="stat-icon">□</div></article>
+      <article class="stat-card green"><div><div class="stat-label">Toplam Ciro</div><div class="stat-value">₺2.244.000</div></div><div class="stat-icon">$</div></article>
+      <article class="stat-card orange"><div><div class="stat-label">Toplam Maliyet</div><div class="stat-value">₺1.377.500</div></div><div class="stat-icon">⌄</div></article>
+      <article class="stat-card violet"><div><div class="stat-label">Toplam Kar</div><div class="stat-value">₺866.500</div><div class="hint">Kar Oranı: %39</div></div><div class="stat-icon">↗</div></article>
+    </div>
+    
+    <section class="panel">
+      <h2>Salonlara Göre Rapor</h2>
+      <div class="table-wrap"><table><thead><tr><th>Salon</th><th>Adet</th><th>Konuk</th><th>Ciro</th><th>Maliyet</th><th>Kar</th><th>Tahsilat</th></tr></thead><tbody><tr><td><strong>Safir Balo Salonu</strong></td><td>3</td><td>1260</td><td>₺1.026.200</td><td>₺626.000</td><td><span class="profit">₺400.200</span></td><td>₺265.000</td></tr><tr><td><strong>Lavanta Kır Bahçesi</strong></td><td>2</td><td>780</td><td>₺840.100</td><td>₺530.000</td><td><span class="profit">₺310.100</span></td><td>₺140.000</td></tr><tr><td><strong>Lale Teras Davet</strong></td><td>3</td><td>520</td><td>₺377.700</td><td>₺221.500</td><td><span class="profit">₺156.200</span></td><td>₺100.000</td></tr></tbody></table></div>
+    </section>
+  
+  </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">Bu tarihte 1 rezervasyon var. Müsaitlik kontrol edin.</div>
+  <script src="app.js?v=20260517-management-edit"></script>
+
+
+</body><div id="codex-browser-sidebar-comments-root" style="position: fixed; inset: 0px; pointer-events: none; z-index: 2147483000;"></div></html>

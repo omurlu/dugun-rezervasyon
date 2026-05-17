@@ -1,0 +1,21 @@
+{
+  "savedAt": "2026-05-17T00:43:42.983Z",
+  "sourceUrl": "http://localhost:5177/#reportHalls",
+  "title": "Düğün Platformu",
+  "localStorage": {},
+  "sessionStorage": {},
+  "scripts": [
+    {
+      "inlineLength": 0,
+      "inlineStart": "",
+      "src": "http://localhost:5177/app.js?v=20260517-management-edit"
+    }
+  ],
+  "links": [
+    {
+      "href": "http://localhost:5177/styles.css",
+      "rel": "stylesheet"
+    }
+  ],
+  "visibleText": "⌂\nAna Sayfa\n☰\nTüm Rezervasyonlar\n⚙ Yönetim\n⌃\n◴\nOrganizasyon Türleri\n▥\nSalonlar\n◇\nPaketler\n✦\nEkstra Özel Seçim\n⌑\nMenü Kategorileri\n☷\nYemek Menüsü\n▥ Raporlar\n⌃\n▣\nGenel Özet\n◴\nOrganizasyon Türü\n▥\nSalon Raporu\n◇\nPaket Raporu\n✦\nEkstra Raporu\n☷\nMenü Raporu\n✉\nSMS Bildirimleri\n♚\nPersonel\n▤\nTedarikçi\n▦\nTedarikçi Cari\n⬡\nStok Takibi\n♡\nDüğün Platformu\nAna Sayfa\nTüm Rezervasyonlar\nRaporlar\n▱ 5.000\n▢\n♙\nDetaylı Raporlar\nBaşlangıç Tarihi\nBitiş Tarihi\nHızlı Filtre\nBu Ay\nGeçen Ay\nBu Yıl\nGeçen Yıl\nÖnceki yıl ile karşılaştır\nGenel Özet\nOrganizasyon Türü\nSalonlar\nPaketler\nEkstralar\nMenüler\nToplam Rezervasyon\n8\n□\nToplam Ciro\n₺2.244.000\n$\nToplam Maliyet\n₺1.377.500\n⌄\nToplam Kar\n₺866.500\nKar Oranı: %39\n↗\nSalonlara Göre Rapor\nSalon\tAdet\tKonuk\tCiro\tMaliyet\tKar\tTahsilat\nSafir Balo Salonu\t3\t1260\t₺1.026.200\t₺626.000\t₺400.200\t₺265.000\nLavanta Kır Bahçesi\t2\t780\t₺840.100\t₺530.000\t₺310.100\t₺140.000\nLale Teras Davet\t3\t520\t₺377.700\t₺221.500\t₺156.200\t₺100.000\nBu tarihte 1 rezervasyon var. Müsaitlik kontrol edin."
+}
