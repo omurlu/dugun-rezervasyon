@@ -2085,14 +2085,62 @@ function renderStock() {
   `;
 }
 
-function staffAssignmentTotals(staffId = null) {
-  const assignments = scopedItems("staffAssignments").filter(item => !staffId || item.staffId === staffId);
+function filteredStaffAssignments() {
+  const staffId = state.staffReportStaffId || "";
+  const start = state.staffReportStart || `${state.year}-01-01`;
+  const end = state.staffReportEnd || `${state.year}-12-31`;
+  return scopedItems("staffAssignments")
+    .filter(item => !staffId || item.staffId === staffId)
+    .filter(item => (!start || item.date >= start) && (!end || item.date <= end))
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function staffAssignmentTotals(staffId = null, assignments = scopedItems("staffAssignments")) {
+  const rows = assignments.filter(item => !staffId || item.staffId === staffId);
+  return rows.reduce((acc, item) => {
+    acc.count += 1;
+    acc.total += Number(item.dailyWage || 0);
+    acc.paid += Number(item.paid || 0);
+    return acc;
+  }, { count: 0, total: 0, paid: 0 });
+}
+
+function staffReportTotals(assignments) {
   return assignments.reduce((acc, item) => {
     acc.count += 1;
     acc.total += Number(item.dailyWage || 0);
     acc.paid += Number(item.paid || 0);
     return acc;
   }, { count: 0, total: 0, paid: 0 });
+}
+
+function staffModal(editing = null) {
+  if (!state.showStaffModal && !editing) return "";
+  return `
+    <div class="modal-backdrop" data-action="closeStaffModal">
+      <div class="modal-panel" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <h2>${editing ? "Personel Düzenle" : "Yeni Personel Ekle"}</h2>
+          <button class="icon-button" type="button" data-action="closeStaffModal" aria-label="Kapat">×</button>
+        </div>
+        <form id="staffForm">
+          <div class="form-grid thirds">
+            <div class="field"><label>Ad Soyad</label><input name="name" required value="${attr(editing?.name || "")}" placeholder="Örn: Ali Demir"></div>
+            <div class="field"><label>Görev / Uzmanlık</label><input name="role" required value="${attr(editing?.role || "")}" placeholder="Piyanist, garson, servis şefi"></div>
+            <div class="field"><label>Telefon</label><input name="phone" value="${attr(editing?.phone || "")}" placeholder="05xx xxx xx xx"></div>
+            <div class="field"><label>E-posta</label><input name="email" type="email" value="${attr(editing?.email || "")}" placeholder="ornek@mail.com"></div>
+            <div class="field"><label>Atama / Etkinlik Sayısı</label><input name="events" type="number" min="0" value="${Number(editing?.events || 0)}"></div>
+            <div class="field"><label>Durum</label><select name="active"><option value="true" ${editing?.active !== false ? "selected" : ""}>Aktif</option><option value="false" ${editing?.active === false ? "selected" : ""}>Pasif</option></select></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn secondary" type="button" data-action="closeStaffModal">Vazgeç</button>
+            <button class="btn dark" type="submit">${editing ? "Personeli Güncelle" : "Personel Ekle"}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
 }
 
 function assignmentStatusLabel(status) {
@@ -2169,14 +2217,55 @@ function staffAssignmentCard(assignment) {
   `;
 }
 
+function staffMovementReport(assignments) {
+  const staff = scopedItems("staff");
+  const selectedStaff = state.staffReportStaffId ? state.staff.find(item => item.id === state.staffReportStaffId) : null;
+  const totals = staffReportTotals(assignments);
+  const remaining = totals.total - totals.paid;
+  return `
+    <section class="panel staff-report-panel">
+      <div class="section-head">
+        <h2>Personel Hareket Raporu</h2>
+        <button class="btn secondary" type="button" data-action="newStaffAssignment">+ Görevlendirme</button>
+      </div>
+      <div class="filters staff-report-filters">
+        <div class="field"><label>Personel</label><select id="staffReportStaff"><option value="">Tüm personel</option>${staff.map(item => `<option value="${item.id}" ${state.staffReportStaffId === item.id ? "selected" : ""}>${item.name} - ${item.role}</option>`).join("")}</select></div>
+        <div class="field"><label>Başlangıç</label><input id="staffReportStart" type="date" value="${state.staffReportStart || `${state.year}-01-01`}"></div>
+        <div class="field"><label>Bitiş</label><input id="staffReportEnd" type="date" value="${state.staffReportEnd || `${state.year}-12-31`}"></div>
+      </div>
+      <div class="staff-report-summary">
+        <article><span>Personel</span><strong>${selectedStaff ? selectedStaff.name : "Tüm personel"}</strong><small>${selectedStaff ? selectedStaff.role : "Genel hareket listesi"}</small></article>
+        <article><span>Toplam Görev</span><strong>${totals.count}</strong></article>
+        <article><span>Toplam Yevmiye</span><strong>${money(totals.total)}</strong></article>
+        <article><span>Ödenen</span><strong class="profit">${money(totals.paid)}</strong></article>
+        <article><span>Kalan Alacak</span><strong class="${remaining > 0 ? "danger-text" : "profit"}">${money(remaining)}</strong></article>
+      </div>
+      ${assignments.length ? table(["Tarih", "Personel", "Görev", "Organizasyon", "Yevmiye", "Ödenen", "Kalan", "Durum"], assignments.map(assignment => {
+        const staffMember = state.staff.find(item => item.id === assignment.staffId);
+        const reservation = state.reservations.find(item => item.id === assignment.reservationId);
+        const rest = Number(assignment.dailyWage || 0) - Number(assignment.paid || 0);
+        return [
+          new Date(assignment.date).toLocaleDateString("tr-TR"),
+          `<strong>${staffMember?.name || "-"}</strong>`,
+          assignment.role || staffMember?.role || "-",
+          reservation?.couple || "-",
+          money(assignment.dailyWage),
+          money(assignment.paid),
+          `<span class="${rest > 0 ? "danger-text" : "profit"}">${money(rest)}</span>`,
+          `<span class="badge ${assignmentStatusClass(assignment.status)}">${assignmentStatusLabel(assignment.status)}</span>`
+        ];
+      })) : empty("Bu filtreye uygun personel hareketi yok", "Personel veya tarih aralığını değiştirerek tekrar deneyin.")}
+    </section>
+  `;
+}
+
 function renderStaff() {
   const staff = scopedItems("staff");
   const editing = state.editingStaffId ? state.staff.find(item => item.id === state.editingStaffId) : null;
   const editingAssignment = state.editingStaffAssignmentId ? state.staffAssignments.find(item => item.id === state.editingStaffAssignmentId) : null;
-  const showForm = Boolean(state.showStaffForm || editing);
   const showAssignmentForm = Boolean(state.showStaffAssignmentForm || editingAssignment);
-  const assignments = scopedItems("staffAssignments").slice().sort((a, b) => a.date.localeCompare(b.date));
-  const assignmentTotals = staffAssignmentTotals();
+  const assignments = filteredStaffAssignments();
+  const assignmentTotals = staffAssignmentTotals(null, scopedItems("staffAssignments"));
   const active = staff.filter(item => item.active).length;
   root.innerHTML = `
     ${pageHeader("Personel Yönetimi", `<div class="row-actions"><button class="btn secondary" type="button" data-action="newStaffAssignment">+ Görevlendirme</button><button class="btn" type="button" data-action="newStaff">+ Yeni Personel Ekle</button></div>`)}
@@ -2186,23 +2275,7 @@ function renderStaff() {
       ${statCard("Kalan Personel Alacağı", money(assignmentTotals.total - assignmentTotals.paid), "₺", assignmentTotals.total - assignmentTotals.paid > 0 ? "orange" : "green", `${active} aktif personel`)}
     </div>
     ${showAssignmentForm ? renderStaffAssignmentForm(editingAssignment) : ""}
-    ${showForm ? `<section class="panel">
-      <h2>${editing ? "Personel Düzenle" : "Yeni Personel Ekle"}</h2>
-      <form id="staffForm">
-        <div class="form-grid thirds">
-          <div class="field"><label>Ad Soyad</label><input name="name" required value="${attr(editing?.name || "")}" placeholder="Örn: Ahmet Yılmaz"></div>
-          <div class="field"><label>Görev</label><input name="role" required value="${attr(editing?.role || "")}" placeholder="Örn: Etkinlik Koordinatörü"></div>
-          <div class="field"><label>Telefon</label><input name="phone" value="${attr(editing?.phone || "")}" placeholder="05xx xxx xx xx"></div>
-          <div class="field"><label>E-posta</label><input name="email" type="email" value="${attr(editing?.email || "")}" placeholder="ornek@mail.com"></div>
-          <div class="field"><label>Atama / Etkinlik Sayısı</label><input name="events" type="number" min="0" value="${Number(editing?.events || 0)}"></div>
-          <div class="field"><label>Durum</label><select name="active"><option value="true" ${editing?.active !== false ? "selected" : ""}>Aktif</option><option value="false" ${editing?.active === false ? "selected" : ""}>Pasif</option></select></div>
-        </div>
-        <div class="form-actions">
-          <button class="btn dark" type="submit">${editing ? "Personeli Güncelle" : "Personel Ekle"}</button>
-          <button class="btn secondary" type="button" data-action="cancelStaffEdit">Vazgeç</button>
-        </div>
-      </form>
-    </section>` : ""}
+    ${staffModal(editing)}
     <div class="staff-grid">
       ${staff.map(item => `
         <article class="person-card">
@@ -2231,6 +2304,7 @@ function renderStaff() {
         ${assignments.map(staffAssignmentCard).join("") || empty("Henüz görevlendirme yok", "Yeni Görevlendirme ile personeli bir organizasyona bağlayabilirsiniz.")}
       </div>
     </section>
+    ${staffMovementReport(assignments)}
   `;
 }
 
@@ -2774,14 +2848,14 @@ function bindForms() {
     if (state.editingStaffId) {
       state.staff = state.staff.map(item => item.id === state.editingStaffId ? { ...item, ...staffMember } : item);
       state.editingStaffId = null;
-      state.showStaffForm = false;
+      state.showStaffModal = false;
       saveState();
       render();
       showToast("Personel güncellendi");
       return;
     }
     state.staff = [{ id: makeId(), tenantId: currentTenant()?.id, ...staffMember }, ...state.staff];
-    state.showStaffForm = false;
+    state.showStaffModal = false;
     saveState();
     render();
     showToast("Personel eklendi");
@@ -2918,6 +2992,24 @@ function bindForms() {
     });
   });
 
+  document.querySelector("#staffReportStaff")?.addEventListener("change", event => {
+    state.staffReportStaffId = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#staffReportStart")?.addEventListener("change", event => {
+    state.staffReportStart = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#staffReportEnd")?.addEventListener("change", event => {
+    state.staffReportEnd = event.target.value;
+    saveState();
+    render();
+  });
+
   updateQuote();
 }
 
@@ -3041,7 +3133,7 @@ document.addEventListener("click", event => {
   }
   if (action === "newStaff") {
     state.editingStaffId = null;
-    state.showStaffForm = true;
+    state.showStaffModal = true;
     saveState();
     render();
     document.querySelector("#staffForm input[name='name']")?.focus();
@@ -3049,7 +3141,7 @@ document.addEventListener("click", event => {
   }
   if (action === "editStaff") {
     state.editingStaffId = actionEl?.dataset.id || null;
-    state.showStaffForm = true;
+    state.showStaffModal = true;
     saveState();
     render();
     document.querySelector("#staffForm input[name='name']")?.focus();
@@ -3057,10 +3149,18 @@ document.addEventListener("click", event => {
   }
   if (action === "cancelStaffEdit") {
     state.editingStaffId = null;
-    state.showStaffForm = false;
+    state.showStaffModal = false;
     saveState();
     render();
     showToast("Personel düzenleme iptal edildi");
+    return;
+  }
+  if (action === "closeStaffModal") {
+    if (actionEl?.classList.contains("modal-backdrop") && event.target.closest(".modal-panel")) return;
+    state.editingStaffId = null;
+    state.showStaffModal = false;
+    saveState();
+    render();
     return;
   }
   if (action === "deleteStaff") {

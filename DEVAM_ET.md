@@ -128,6 +128,9 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - Personel bolumu gorevlendirme/yevmiye mantigina genisletildi.
 - Mekan sahibi personeli secip rezervasyona baglayabilir; gorev, tarih, gunluk yevmiye, odenen tutar ve kalan alacak kart olarak takip edilir.
 - Personel kartlari artik toplam gorev, toplam yevmiye, odenen ve kalan alacak ozetlerini gosterir.
+- Yeni personel ekleme/duzenleme popup olarak acilir; sayfa uzerinde surekli form kalabaligi olusturmaz.
+- Personel Hareket Raporu eklendi: tum personel veya tek personel secilebilir, tarih araligi verilebilir, gorev hareketleri tablo halinde listelenir.
+- Personel hareket raporu ustunde personel adi/gorevi, toplam gorev, toplam yevmiye, odenen ve kalan alacak ozet kutulari bulunur.
 
 ## GitHub baglantisi
 

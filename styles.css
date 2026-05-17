@@ -1723,6 +1723,42 @@ th {
   grid-column: 1 / -1;
 }
 
+.staff-report-panel {
+  margin-top: 18px;
+}
+
+.staff-report-filters {
+  grid-template-columns: 1.2fr 1fr 1fr;
+  margin-bottom: 18px;
+}
+
+.staff-report-summary {
+  display: grid;
+  grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.staff-report-summary article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 16px;
+}
+
+.staff-report-summary span,
+.staff-report-summary small {
+  display: block;
+  color: var(--muted);
+}
+
+.staff-report-summary strong {
+  display: block;
+  margin: 7px 0 2px;
+  font-size: 20px;
+  color: var(--ink);
+}
+
 .stat-card.green .stat-value,
 .stat-card.green .stat-icon { color: var(--green); }
 .stat-card.red .stat-value,
@@ -1753,7 +1789,7 @@ th {
   .insight-grid, .comparison-grid, .top-earners-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sms-overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .monthly-chart { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .sms-grid, .staff-grid, .assignment-grid { grid-template-columns: 1fr; }
+  .sms-grid, .staff-grid, .assignment-grid, .staff-report-summary { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 720px) {
@@ -1767,7 +1803,7 @@ th {
   .report-heading { flex-direction: column; align-items: stretch; }
   .report-actions { width: 100%; }
   .report-actions .btn { flex: 1; }
-  .months-grid, .stats-grid, .executive-summary, .insight-grid, .comparison-grid, .top-earners-grid, .collection-grid, .sms-overview-grid, .form-grid, .form-grid.thirds, .category-grid, .tenant-card, .membership-strip, .tenant-followup, .filters, .tabs, .tabs.three { grid-template-columns: 1fr; }
+  .months-grid, .stats-grid, .executive-summary, .insight-grid, .comparison-grid, .top-earners-grid, .collection-grid, .sms-overview-grid, .staff-report-filters, .form-grid, .form-grid.thirds, .category-grid, .tenant-card, .membership-strip, .tenant-followup, .filters, .tabs, .tabs.three { grid-template-columns: 1fr; }
   .monthly-chart { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .tenant-metrics { align-items: flex-start; text-align: left; }
   .panel { padding: 18px; }
