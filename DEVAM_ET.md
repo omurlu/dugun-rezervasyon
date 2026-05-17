@@ -81,6 +81,19 @@ Ek ana admin takip alanlari eklendi:
 
 Bu alanlar mekanin kendi rezervasyon muhasebesinden ayridir; platform sahibinin musteri/mekan takibi icindir.
 
+## Rapor Filtre ve Karsilastirma Notu
+
+Raporlar bolumunde daha detayli secim ve karsilastirma baslatildi:
+
+- Genel rapor alanina `Karsilastirma` secimi eklendi.
+- Secili tarih araligi, gecen yil tam yil veya gecen yil ayni tarih araligi ile kiyaslanabilir.
+- Organizasyon turu raporunda sadece dugun, nisan, kina gibi tek bir tur secilebilir.
+- Salon raporunda sadece secilen salona ait dokum alinabilir.
+- Paket raporunda sadece secilen pakete ait dokum alinabilir.
+- Ekstralar raporunda tek bir ekstra urun/hizmet secilebilir.
+- Menuler raporunda tek bir yemek menusu secilebilir.
+- Bu filtreler seciliyken ustteki toplamlar ve karsilastirma kartlari ayni secime gore hesaplanir.
+
 ## GitHub baglantisi
 
 GitHub deposu olarak su adres not edildi:

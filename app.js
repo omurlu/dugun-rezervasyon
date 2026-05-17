@@ -964,6 +964,112 @@ function isInReportRange(item, range) {
   return (!range.start || item.date >= range.start) && (!range.end || item.date <= range.end);
 }
 
+function shiftDateYear(value, diff) {
+  if (!value) return "";
+  const date = new Date(`${value}T00:00:00`);
+  date.setFullYear(date.getFullYear() + diff);
+  return localDateValue(date);
+}
+
+function comparisonRange(range) {
+  const mode = state.reportCompareMode || "";
+  if (mode === "previousYear") {
+    const startYear = Number((range.start || today()).slice(0, 4));
+    return { start: `${startYear - 1}-01-01`, end: `${startYear - 1}-12-31` };
+  }
+  if (mode === "sameMonthLastYear") {
+    return { start: shiftDateYear(range.start, -1), end: shiftDateYear(range.end, -1) };
+  }
+  return null;
+}
+
+function reservationHasLineItem(reservation, field, selected) {
+  if (!selected) return true;
+  return (reservation[field] || []).some(raw => sameText(typeof raw === "string" ? raw : raw.name, selected));
+}
+
+function reportOption(value, name = value) {
+  const cleanValue = String(value || "").trim();
+  if (!cleanValue || cleanValue.includes("seçilmedi")) return null;
+  return { value: cleanValue, name: String(name || cleanValue).trim() };
+}
+
+function mergeReportOptions(options) {
+  const seen = new Set();
+  return options
+    .filter(Boolean)
+    .filter(option => {
+      const key = option.value.toLocaleLowerCase("tr-TR");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "tr-TR"));
+}
+
+function reservationLineOptions(field) {
+  return visibleReservations().flatMap(reservation => (reservation[field] || []).map(raw => {
+    const name = typeof raw === "string" ? raw : raw.name;
+    return reportOption(name);
+  }));
+}
+
+function reportFilterConfig(activeReport) {
+  const reservations = visibleReservations();
+  const configs = {
+    reportTypes: { label: "Organizasyon Türü", all: "Tüm organizasyon türleri", options: mergeReportOptions([...scopedItems("organizationTypes").map(item => reportOption(item.value, item.name)), ...reservations.map(item => reportOption(item.type, typeName(item.type)))]) },
+    reportHalls: { label: "Salon", all: "Tüm salonlar", options: mergeReportOptions([...scopedItems("halls").map(item => reportOption(item.name)), ...reservations.map(item => reportOption(item.hallName))]) },
+    reportPackages: { label: "Paket", all: "Tüm paketler", options: mergeReportOptions([...scopedItems("packages").map(item => reportOption(item.name)), ...reservations.map(item => reportOption(item.packageName))]) },
+    reportExtras: { label: "Ekstra Ürün / Hizmet", all: "Tüm ekstralar", options: mergeReportOptions([...scopedItems("extras").map(item => reportOption(item.name)), ...reservationLineOptions("extras")]) },
+    reportMenus: { label: "Yemek Menüsü", all: "Tüm menüler", options: mergeReportOptions([...scopedItems("menus").map(item => reportOption(item.name)), ...reservationLineOptions("menus")]) }
+  };
+  return configs[activeReport] || null;
+}
+
+function reportFilterMatches(item, activeReport, selected) {
+  if (!selected) return true;
+  if (activeReport === "reportTypes") return item.type === selected;
+  if (activeReport === "reportHalls") return sameText(item.hallName, selected);
+  if (activeReport === "reportPackages") return sameText(item.packageName, selected);
+  if (activeReport === "reportExtras") return reservationHasLineItem(item, "extras", selected);
+  if (activeReport === "reportMenus") return reservationHasLineItem(item, "menus", selected);
+  return true;
+}
+
+function filteredReportReservations(activeReport, range) {
+  const selected = state.reportFilterValue || "";
+  return visibleReservations().filter(item => isInReportRange(item, range) && reportFilterMatches(item, activeReport, selected));
+}
+
+function summarizeReservations(reservations) {
+  return reservations.reduce((acc, item) => {
+    acc.revenue += Number(item.total || 0);
+    acc.cost += Number(item.cost || 0);
+    acc.paid += Number(item.paid || 0);
+    acc.guests += Number(item.guests || 0);
+    return acc;
+  }, { revenue: 0, cost: 0, paid: 0, guests: 0 });
+}
+
+function comparisonMarkup(currentReservations, comparisonReservations, comparisonLabel) {
+  if (!comparisonLabel) return "";
+  const current = summarizeReservations(currentReservations);
+  const previous = summarizeReservations(comparisonReservations);
+  const diff = current.revenue - previous.revenue;
+  const percent = previous.revenue ? Math.round((diff / previous.revenue) * 100) : null;
+  return `
+    <section class="panel comparison-panel">
+      <h2>${comparisonLabel} Karşılaştırması</h2>
+      <div class="comparison-grid">
+        ${statCard("Bu Dönem Ciro", money(current.revenue), "$", "green", `${currentReservations.length} rezervasyon`)}
+        ${statCard("Karşılaştırılan Ciro", money(previous.revenue), "$", "blue", `${comparisonReservations.length} rezervasyon`)}
+        ${statCard("Ciro Farkı", money(diff), "↕", diff >= 0 ? "green" : "red", percent === null ? "Önceki veri yok" : `%${percent}`)}
+        ${statCard("Tahsilat Farkı", money(current.paid - previous.paid), "□", current.paid >= previous.paid ? "green" : "red")}
+      </div>
+    </section>
+  `;
+}
+
 function reportGroupRows(reservations, keyFn, labelFn) {
   const groups = reservations.reduce((map, item) => {
     const key = keyFn(item) || "Belirtilmemiş";
@@ -1067,13 +1173,23 @@ function renderReports() {
   };
   const activeReport = tabLabels[state.activeView] ? state.activeView : "reports";
   const range = getReportRange();
-  const reportReservations = visibleReservations().filter(item => isInReportRange(item, range));
-  const totals = reportReservations.reduce((acc, item) => {
-    acc.revenue += Number(item.total || 0);
-    acc.cost += Number(item.cost || 0);
-    acc.paid += Number(item.paid || 0);
-    return acc;
-  }, { revenue: 0, cost: 0, paid: 0 });
+  const filterConfig = reportFilterConfig(activeReport);
+  if (!filterConfig) {
+    state.reportFilterValue = "";
+    state.reportFilterView = "";
+  } else if (state.reportFilterView !== activeReport) {
+    state.reportFilterValue = "";
+    state.reportFilterView = activeReport;
+  } else if (state.reportFilterValue && !filterConfig.options.some(option => option.value === state.reportFilterValue)) {
+    state.reportFilterValue = "";
+  }
+  const reportReservations = filteredReportReservations(activeReport, range);
+  const compareRange = comparisonRange(range);
+  const comparisonReservations = compareRange ? filteredReportReservations(activeReport, compareRange) : [];
+  const comparisonLabel = state.reportCompareMode === "previousYear"
+    ? "Geçen Yıl"
+    : state.reportCompareMode === "sameMonthLastYear" ? "Geçen Yıl Aynı Tarih Aralığı" : "";
+  const totals = summarizeReservations(reportReservations);
   const profit = totals.revenue - totals.cost;
   root.innerHTML = `
     <h1 class="report-title">Detaylı Raporlar</h1>
@@ -1082,8 +1198,9 @@ function renderReports() {
         <div class="field"><label>Başlangıç Tarihi</label><input id="reportStart" type="date" value="${range.start}"></div>
         <div class="field"><label>Bitiş Tarihi</label><input id="reportEnd" type="date" value="${range.end}"></div>
         <div class="field"><label>Hızlı Filtre</label><div class="quick-filter"><button class="btn secondary" type="button" data-report-range="thisMonth">Bu Ay</button><button class="btn secondary" type="button" data-report-range="lastMonth">Geçen Ay</button><button class="btn secondary" type="button" data-report-range="thisYear">Bu Yıl</button><button class="btn secondary" type="button" data-report-range="lastYear">Geçen Yıl</button></div></div>
-        <label class="check-row flat"><input type="checkbox"> Önceki yıl ile karşılaştır</label>
+        <div class="field"><label>Karşılaştırma</label><select id="reportCompareMode"><option value="" ${!state.reportCompareMode ? "selected" : ""}>Karşılaştırma yok</option><option value="previousYear" ${state.reportCompareMode === "previousYear" ? "selected" : ""}>Geçen yılla karşılaştır</option><option value="sameMonthLastYear" ${state.reportCompareMode === "sameMonthLastYear" ? "selected" : ""}>Geçen yıl aynı tarih aralığı</option></select></div>
       </div>
+      ${filterConfig ? `<div class="filters report-specific-filter"><div class="field"><label>${filterConfig.label} Seçimi</label><select id="reportFilterValue"><option value="">${filterConfig.all}</option>${filterConfig.options.map(option => `<option value="${attr(option.value)}" ${state.reportFilterValue === option.value ? "selected" : ""}>${option.name}</option>`).join("")}</select></div></div>` : ""}
     </div>
     <div class="tabs">
       ${Object.entries(tabLabels).map(([view, label]) => `<button class="tab ${activeReport === view ? "active" : ""}" data-view="${view}">${label}</button>`).join("")}
@@ -1094,6 +1211,7 @@ function renderReports() {
       ${statCard("Toplam Maliyet", money(totals.cost), "⌄", "orange")}
       ${statCard("Toplam Kar", money(profit), "↗", "violet", `Kar Oranı: %${totals.revenue ? Math.round((profit / totals.revenue) * 100) : 0}`)}
     </div>
+    ${comparisonMarkup(reportReservations, comparisonReservations, comparisonLabel)}
     ${renderReportDetail(activeReport, reportReservations, totals)}
   `;
 }
@@ -1715,6 +1833,19 @@ function bindForms() {
 
   document.querySelector("#reportEnd")?.addEventListener("change", event => {
     state.reportEnd = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#reportCompareMode")?.addEventListener("change", event => {
+    state.reportCompareMode = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#reportFilterValue")?.addEventListener("change", event => {
+    state.reportFilterValue = event.target.value;
+    state.reportFilterView = state.activeView;
     saveState();
     render();
   });
