@@ -1091,6 +1091,19 @@ function tenantStats(tenantId) {
   return { reservations: reservations.length, revenue, paid };
 }
 
+function tenantMatches(tenant, query) {
+  const needle = String(query || "").trim().toLocaleLowerCase("tr-TR");
+  if (!needle) return true;
+  return [
+    tenant.name,
+    tenant.username,
+    tenant.contactName,
+    tenant.phone,
+    tenant.city,
+    tenant.status === "active" ? "aktif" : "pasif"
+  ].some(value => String(value || "").toLocaleLowerCase("tr-TR").includes(needle));
+}
+
 function tenantCard(tenant) {
   const stats = tenantStats(tenant.id);
   const selected = tenant.id === state.activeTenantId;
@@ -1119,6 +1132,32 @@ function tenantCard(tenant) {
 
 function renderTenants() {
   const activeTenants = state.tenants.filter(item => item.status === "active").length;
+  const query = state.tenantQuery || "";
+  const filteredTenants = state.tenants.filter(tenant => tenantMatches(tenant, query));
+  const tenantModal = state.showTenantModal ? `
+    <div class="modal-backdrop" data-action="closeTenantModal">
+      <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="tenantModalTitle">
+        <div class="modal-head">
+          <h2 id="tenantModalTitle">Yeni Mekan Hesabı Aç</h2>
+          <button class="icon-button" type="button" data-action="closeTenantModal" aria-label="Kapat">×</button>
+        </div>
+        <form id="tenantForm">
+          <div class="form-grid">
+            <div class="field"><label>Mekan Adı *</label><input name="name" required placeholder="Örn: İnci Davet Salonu"></div>
+            <div class="field"><label>Kullanıcı Adı *</label><input name="username" required placeholder="Örn: inci"></div>
+            <div class="field"><label>Şifre *</label><input name="password" required placeholder="Geçici şifre"></div>
+            <div class="field"><label>Yetkili Kişi</label><input name="contactName" placeholder="Mekan yetkilisi"></div>
+            <div class="field"><label>Telefon</label><input name="phone" placeholder="05xx xxx xx xx"></div>
+            <div class="field"><label>Şehir</label><input name="city" placeholder="İstanbul"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn secondary" type="button" data-action="closeTenantModal">Vazgeç</button>
+            <button class="btn dark" type="submit">Mekan Hesabı Aç</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  ` : "";
   root.innerHTML = `
     ${pageHeader("Mekan / Müşteri Hesapları", `<button class="btn" type="button" data-action="focusTenantForm">+ Yeni Mekan</button>`)}
     <div class="stats-grid three-cols">
@@ -1127,23 +1166,17 @@ function renderTenants() {
       ${statCard("Seçili Mekan", currentTenant()?.name || "-", "◇", "violet")}
     </div>
     <section class="panel">
-      <h2>Yeni Mekan Hesabı Aç</h2>
-      <form id="tenantForm">
-        <div class="form-grid">
-          <div class="field"><label>Mekan Adı *</label><input name="name" required placeholder="Örn: İnci Davet Salonu"></div>
-          <div class="field"><label>Kullanıcı Adı *</label><input name="username" required placeholder="Örn: inci"></div>
-          <div class="field"><label>Şifre *</label><input name="password" required placeholder="Geçici şifre"></div>
-          <div class="field"><label>Yetkili Kişi</label><input name="contactName" placeholder="Mekan yetkilisi"></div>
-          <div class="field"><label>Telefon</label><input name="phone" placeholder="05xx xxx xx xx"></div>
-          <div class="field"><label>Şehir</label><input name="city" placeholder="İstanbul"></div>
-        </div>
-        <div class="form-actions"><button class="btn dark" type="submit">Mekan Hesabı Aç</button></div>
-      </form>
+      <div class="reservation-search">
+        <span>⌕</span>
+        <input id="tenantSearch" value="${attr(query)}" placeholder="Mekan adı, kullanıcı adı, yetkili, telefon veya şehir ara...">
+      </div>
+      <p class="muted" id="tenantCount">Toplam ${filteredTenants.length} mekan gösteriliyor</p>
     </section>
     <section class="panel">
       <h2>Mevcut Mekanlar</h2>
-      <div class="tenant-list">${state.tenants.map(tenantCard).join("")}</div>
+      <div class="tenant-list" id="tenantList">${filteredTenants.map(tenantCard).join("") || empty("Aramanıza uygun mekan yok", "Mekan adı, yetkili, kullanıcı adı veya şehirle tekrar deneyin.")}</div>
     </section>
+    ${tenantModal}
   `;
 }
 
@@ -1332,9 +1365,18 @@ function bindForms() {
     };
     state.tenants = [tenant, ...state.tenants];
     state.activeTenantId = tenant.id;
+    state.showTenantModal = false;
     saveState();
     render();
     showToast("Mekan hesabı açıldı");
+  });
+
+  document.querySelector("#tenantSearch")?.addEventListener("input", event => {
+    state.tenantQuery = event.target.value;
+    const filteredTenants = state.tenants.filter(tenant => tenantMatches(tenant, state.tenantQuery));
+    document.querySelector("#tenantCount").textContent = `Toplam ${filteredTenants.length} mekan gösteriliyor`;
+    document.querySelector("#tenantList").innerHTML = filteredTenants.map(tenantCard).join("") || empty("Aramanıza uygun mekan yok", "Mekan adı, yetkili, kullanıcı adı veya şehirle tekrar deneyin.");
+    saveState();
   });
 
   document.querySelector("#typeForm")?.addEventListener("submit", event => {
@@ -1591,7 +1633,17 @@ document.addEventListener("click", event => {
     return;
   }
   if (action === "focusTenantForm") {
+    state.showTenantModal = true;
+    saveState();
+    render();
     document.querySelector("#tenantForm input[name='name']")?.focus();
+    return;
+  }
+  if (action === "closeTenantModal") {
+    if (event.target.closest(".modal-panel") && !event.target.closest("[data-action='closeTenantModal']")) return;
+    state.showTenantModal = false;
+    saveState();
+    render();
     return;
   }
 
