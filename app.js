@@ -1757,12 +1757,12 @@ function renderReports() {
       ${statCard("Toplam Maliyet", money(totals.cost), "⌄", "orange")}
       ${statCard("Toplam Kar", money(profit), "↗", "violet", `Kar Oranı: %${totals.revenue ? Math.round((profit / totals.revenue) * 100) : 0}`)}
     </div>
-    ${smartInsightsMarkup(totals, comparisonTotals, reportReservations)}
+    ${renderReportDetail(activeReport, reportReservations, totals)}
     ${comparisonMarkup(reportReservations, comparisonReservations, comparisonLabel)}
+    ${smartInsightsMarkup(totals, comparisonTotals, reportReservations)}
     ${monthlyChartMarkup(reportReservations)}
     ${topEarnersMarkup(reportReservations)}
     ${collectionReportMarkup(reportReservations, totals)}
-    ${renderReportDetail(activeReport, reportReservations, totals)}
   `;
 }
 

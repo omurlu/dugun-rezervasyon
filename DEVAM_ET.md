@@ -102,6 +102,7 @@ Raporlar bolumunde daha detayli secim ve karsilastirma baslatildi:
 - Genisletilen demo kayitlarin gecen yil karsiliklari da otomatik eklenir; boylece rapor filtreleri ve grafik karsilastirmalari daha gercekci test edilir.
 - Rapor ekranina mekan sahibi icin ust yonetici ozeti, akilli ozet/uyarilar, en cok kazandiranlar, aylik ciro-kar grafigi ve tahsilat raporu eklendi.
 - Rapor ekranina Excel'e aktar ve PDF/Yazdir butonlari eklendi. Excel cikisi secili tarih ve filtreye gore CSV dosyasi indirir; PDF icin tarayici yazdirma ekrani acilir.
+- Rapor sayfasi siralamasi duzenlendi: secilen rapor tablosu ve karsilastirma ustte, genel analizler ve tahsilat/aylik grafik alanlari altta gosterilir.
 
 ## GitHub baglantisi
 
