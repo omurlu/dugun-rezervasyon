@@ -104,6 +104,19 @@ Raporlar bolumunde daha detayli secim ve karsilastirma baslatildi:
 - Rapor ekranina Excel'e aktar ve PDF/Yazdir butonlari eklendi. Excel cikisi secili tarih ve filtreye gore CSV dosyasi indirir; PDF icin tarayici yazdirma ekrani acilir.
 - Rapor sayfasi siralamasi duzenlendi: secilen rapor tablosu ve karsilastirma ustte, genel analizler ve tahsilat/aylik grafik alanlari altta gosterilir.
 
+## SMS Bildirimleri Notu
+
+SMS bolumu merkezi havuz mantigina gore duzenlendi:
+
+- Sag ustteki `5.000` artik ana SMS havuzu kalan kredi gostergesidir.
+- Varsayilan SMS gonderici basligi `AYSAH` olarak ayarlandi.
+- Ana admin SMS saglayici kullanici adi, sifre/API anahtari, API adresi ve toplam kredi bilgisini girebilir.
+- Her mekan icin ana havuzdan kullanacagi SMS kotasi tanimlanabilir.
+- Mekanlar ayri SMS paketi almak zorunda kalmadan ana havuzdan kota kadar gonderim yapacak sekilde tasarlandi.
+- Prova, son detay, dugunden 1 gun once, odeme hatirlatmasi, tesekkur, fotograf/video teslim ve yildonumu icin otomatik SMS sablonlari eklendi.
+- Rezervasyon tarihine gore yaklasan otomatik SMS gonderimleri listelenir.
+- Canli SMS gonderimi icin sonraki adimda secilecek saglayicinin API formatina gore gercek gonderim baglantisi eklenecek.
+
 ## GitHub baglantisi
 
 GitHub deposu olarak su adres not edildi:

@@ -191,6 +191,7 @@ const root = document.querySelector("#view-root");
 const toast = document.querySelector("#toast");
 const sidebar = document.querySelector(".sidebar");
 const accountPill = document.querySelector("#accountPill");
+const smsCreditPill = document.querySelector("#smsCreditPill");
 const tenantScopedCollections = ["organizationTypes", "halls", "packages", "extras", "menuCategories", "menus", "reservations", "smsTemplates", "stock", "staff", "suppliers"];
 normalizeState();
 
@@ -221,6 +222,7 @@ function normalizeState() {
   ensureTenantDemoReservations();
   markTenantDemoReservations();
   ensureLastYearComparisonReservations();
+  ensureSmsSystem();
   saveState();
 }
 
@@ -710,6 +712,109 @@ function ensureLastYearComparisonReservations() {
   });
 }
 
+function defaultSmsTemplates() {
+  return [
+    {
+      title: "Prova Randevusu Hatırlatma",
+      tag: "Prova",
+      mode: "Otomatik",
+      trigger: "before_event",
+      offsetDays: 7,
+      active: true,
+      body: "Sayın {gelin_adi} ve {damat_adi}, {mekan_adi} prova randevunuz için düğününüze 1 hafta kaldığını hatırlatır. Detaylar için bizimle iletişime geçebilirsiniz."
+    },
+    {
+      title: "Son Detay Toplantısı",
+      tag: "Operasyon",
+      mode: "Otomatik",
+      trigger: "before_event",
+      offsetDays: 3,
+      active: true,
+      body: "Merhaba {gelin_adi} ve {damat_adi}, {tarih} tarihli organizasyonunuz için son detayları netleştirmek üzere sizi bekliyoruz. {mekan_adi}"
+    },
+    {
+      title: "Düğün / Organizasyon Bir Gün Önce",
+      tag: "Hatırlatma",
+      mode: "Otomatik",
+      trigger: "before_event",
+      offsetDays: 1,
+      active: true,
+      body: "Sevgili {gelin_adi} ve {damat_adi}, özel gününüz yarın. {mekan_adi} ekibi olarak tüm hazırlıklarınızı heyecanla tamamlıyoruz."
+    },
+    {
+      title: "Ödeme Hatırlatması",
+      tag: "Tahsilat",
+      mode: "Otomatik",
+      trigger: "before_event",
+      offsetDays: 5,
+      active: true,
+      body: "Merhaba {gelin_adi} ve {damat_adi}, organizasyonunuz için kalan ödeme tutarınız {kalan_tutar}. Bilgi için {mekan_adi} ile iletişime geçebilirsiniz."
+    },
+    {
+      title: "Organizasyon Sonrası Teşekkür",
+      tag: "Teşekkür",
+      mode: "Otomatik",
+      trigger: "after_event",
+      offsetDays: 1,
+      active: true,
+      body: "Sevgili {gelin_adi} ve {damat_adi}, özel gününüzü {mekan_adi} ile paylaştığınız için teşekkür eder, mutluluklar dileriz."
+    },
+    {
+      title: "Fotoğraf / Video Teslim Bilgisi",
+      tag: "Medya",
+      mode: "Otomatik",
+      trigger: "after_event",
+      offsetDays: 7,
+      active: true,
+      body: "Merhaba {gelin_adi} ve {damat_adi}, fotoğraf ve video teslim sürecinizle ilgili bilgi almak için {mekan_adi} ile iletişime geçebilirsiniz."
+    },
+    {
+      title: "Yıldönümü Kutlama",
+      tag: "Sadakat",
+      mode: "Otomatik",
+      trigger: "after_event",
+      offsetDays: 365,
+      active: true,
+      body: "Sevgili {gelin_adi} ve {damat_adi}, evlilik yıl dönümünüz kutlu olsun. {mekan_adi} olarak mutluluğunuzun daim olmasını dileriz."
+    }
+  ];
+}
+
+function ensureSmsSystem() {
+  state.smsSettings = {
+    providerTitle: "AYSAH",
+    senderTitle: "AYSAH",
+    providerUser: "",
+    providerPassword: "",
+    providerApiUrl: "",
+    providerMode: "central_pool",
+    defaultTenantQuota: 250,
+    credit: 5000,
+    used: 0,
+    ...state.smsSettings
+  };
+  if (!Array.isArray(state.smsTemplates)) state.smsTemplates = [];
+  const defaults = defaultSmsTemplates();
+  defaults.forEach(template => {
+    const exists = state.smsTemplates.some(item => sameText(item.title, template.title) && (!item.tenantId || item.tenantId === currentTenant()?.id));
+    if (!exists) state.smsTemplates.push({ id: makeId(), tenantId: currentTenant()?.id, ...template });
+  });
+  state.smsTemplates = state.smsTemplates.map(template => ({
+    trigger: template.offset ? "before_event" : "manual",
+    offsetDays: Number(String(template.offset || "").match(/\d+/)?.[0] || template.offsetDays || 0),
+    active: template.active !== false,
+    mode: template.mode || "Otomatik",
+    ...template
+  }));
+  if (!Array.isArray(state.smsHistory)) state.smsHistory = [];
+  if (!state.tenantSmsQuotas) state.tenantSmsQuotas = {};
+  state.tenants.forEach(tenant => {
+    if (!state.tenantSmsQuotas[tenant.id]) {
+      state.tenantSmsQuotas[tenant.id] = { quota: state.smsSettings.defaultTenantQuota, used: 0 };
+    }
+  });
+}
+
 function money(value) {
   return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(Number(value || 0));
 }
@@ -904,6 +1009,11 @@ function renderAccountPill() {
     <span>${isAdmin() ? "Ana Admin" : "Mekan Paneli"}</span>
     <strong>${tenant?.name || "Mekan seçilmedi"}</strong>
   `;
+  if (smsCreditPill) {
+    const remaining = Number(state.smsSettings?.credit || 0) - Number(state.smsSettings?.used || 0);
+    smsCreditPill.innerHTML = `▱ ${remaining.toLocaleString("tr-TR")}`;
+    smsCreditPill.title = "Ana SMS havuzu kalan kredi";
+  }
 }
 
 function attr(value) {
@@ -1766,23 +1876,103 @@ function renderReports() {
   `;
 }
 
+function smsTriggerLabel(template) {
+  if (template.trigger === "before_event") return `${template.offsetDays} gün önce`;
+  if (template.trigger === "after_event") return `${template.offsetDays} gün sonra`;
+  return "Manuel";
+}
+
+function smsSendDate(template, reservation) {
+  if (template.trigger === "manual") return "";
+  const date = new Date(`${reservation.date}T00:00:00`);
+  const offset = Number(template.offsetDays || 0);
+  date.setDate(date.getDate() + (template.trigger === "before_event" ? -offset : offset));
+  return localDateValue(date);
+}
+
+function smsPreview(template, reservation) {
+  const remaining = Number(reservation.total || 0) - Number(reservation.paid || 0);
+  return String(template.body || "")
+    .replaceAll("{gelin_adi}", reservation.brideName || "Gelin")
+    .replaceAll("{damat_adi}", reservation.groomName || "Damat")
+    .replaceAll("{mekan_adi}", currentTenant()?.name || "Mekan")
+    .replaceAll("{tarih}", new Date(reservation.date).toLocaleDateString("tr-TR"))
+    .replaceAll("{kalan_tutar}", money(remaining))
+    .replaceAll("{tutar}", money(remaining));
+}
+
+function smsScheduleRows() {
+  const templates = scopedItems("smsTemplates").filter(template => template.active !== false && template.trigger !== "manual");
+  return visibleReservations()
+    .flatMap(reservation => templates.map(template => ({
+      reservation,
+      template,
+      sendDate: smsSendDate(template, reservation)
+    })))
+    .filter(item => item.sendDate)
+    .sort((a, b) => a.sendDate.localeCompare(b.sendDate))
+    .slice(0, 12);
+}
+
 function renderSms() {
+  const settings = state.smsSettings || {};
+  const remaining = Number(settings.credit || 0) - Number(settings.used || 0);
+  const tenant = currentTenant();
+  const quota = state.tenantSmsQuotas?.[tenant?.id] || { quota: settings.defaultTenantQuota || 0, used: 0 };
+  const templates = scopedItems("smsTemplates");
+  const scheduled = smsScheduleRows();
   root.innerHTML = `
-    ${pageHeader("SMS'leri", `<div class="sms-credit"><span>Kalan SMS Kredisi</span><strong>5.000</strong></div>`)}
-    <div class="tabs three"><button class="tab active">Mesaj Şablonları</button><button class="tab">SMS Geçmişi</button><button class="tab">Saha</button></div>
-    <div class="section-head small"><p>Toplam ${state.smsTemplates.length} şablon</p><button class="btn">Yeni Şablon Ekle</button></div>
-    <div class="sms-grid">
-      ${state.smsTemplates.map(template => `
-        <article class="sms-card">
-          <div class="card-actions"><button>✎</button><button>⌫</button></div>
-          <h2>${template.title}</h2>
-          <span class="tag">${template.tag}</span>
-          <p>${template.body}</p>
-          <small>${template.mode}</small>
-          ${template.offset ? `<em>${template.offset}</em>` : ""}
-        </article>
-      `).join("")}
+    ${pageHeader("SMS Bildirimleri", `<div class="sms-credit"><span>Ana SMS Havuzu</span><strong>${remaining.toLocaleString("tr-TR")}</strong><small>Başlık: ${settings.senderTitle || "AYSAH"}</small></div>`)}
+    <section class="panel sms-settings-panel">
+      <div class="sms-explain">
+        <h2>Merkezi SMS Bağlantısı</h2>
+        <p>Mekanlar ayrı SMS paketi almak yerine senin ana SMS havuzundan, tanımladığın kota kadar gönderim yapar. Gönderici başlığı varsayılan olarak <strong>${settings.senderTitle || "AYSAH"}</strong> görünür.</p>
+      </div>
+      <form id="smsSettingsForm">
+        <div class="form-grid thirds">
+          <div class="field"><label>Gönderici Başlığı</label><input name="senderTitle" value="${attr(settings.senderTitle || "AYSAH")}"></div>
+          <div class="field"><label>Sağlayıcı Kullanıcı Adı</label><input name="providerUser" value="${attr(settings.providerUser || "")}" placeholder="SMS panel kullanıcı adı"></div>
+          <div class="field"><label>Sağlayıcı Şifre / API Anahtarı</label><input name="providerPassword" type="password" value="${attr(settings.providerPassword || "")}" placeholder="Şifre veya API anahtarı"></div>
+          <div class="field"><label>API Adresi</label><input name="providerApiUrl" value="${attr(settings.providerApiUrl || "")}" placeholder="https://..."></div>
+          <div class="field"><label>Ana SMS Kredisi</label><input name="credit" type="number" min="0" value="${Number(settings.credit || 0)}"></div>
+          <div class="field"><label>Bu Mekanın Kotası</label><input name="tenantQuota" type="number" min="0" value="${Number(quota.quota || 0)}"></div>
+        </div>
+        <div class="form-actions"><button class="btn dark" type="submit">SMS Ayarlarını Kaydet</button></div>
+      </form>
+    </section>
+    <div class="sms-overview-grid">
+      ${statCard("Ana Havuz Kalan", remaining.toLocaleString("tr-TR"), "▱", "violet")}
+      ${statCard("Bu Mekan Kotası", `${Number(quota.used || 0)} / ${Number(quota.quota || 0)}`, "□", "blue")}
+      ${statCard("Aktif Şablon", templates.filter(item => item.active !== false).length, "✉", "green")}
+      ${statCard("Planlanan SMS", scheduled.length, "⌁", "orange")}
     </div>
+    <section class="panel">
+      <h2>Otomatik SMS Şablonları</h2>
+      <div class="sms-grid">
+        ${templates.map(template => `
+          <article class="sms-card ${template.active === false ? "passive" : ""}">
+            <h2>${template.title}</h2>
+            <span class="tag">${template.tag}</span>
+            <p>${template.body}</p>
+            <small>${template.active === false ? "Pasif" : "Aktif"} · ${template.mode || "Otomatik"} · ${smsTriggerLabel(template)}</small>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Yaklaşan Otomatik Gönderimler</h2>
+      ${scheduled.length ? table(["Gönderim", "Şablon", "Rezervasyon", "Telefon", "Mesaj Önizleme"], scheduled.map(item => [
+        new Date(item.sendDate).toLocaleDateString("tr-TR"),
+        item.template.title,
+        `<strong>${item.reservation.couple}</strong>`,
+        item.reservation.phone || "-",
+        smsPreview(item.template, item.reservation)
+      ])) : empty("Planlanan SMS yok", "Aktif şablonlar ve rezervasyon tarihleri oluşunca burada görünür.")}
+    </section>
+    <section class="panel">
+      <h2>Gönderim Geçmişi</h2>
+      ${state.smsHistory.length ? table(["Tarih", "Mekan", "Alıcı", "Şablon", "Durum"], state.smsHistory.map(item => [item.date, item.tenantName, item.phone, item.template, item.status])) : empty("Henüz gerçek gönderim yapılmadı", "Canlı SMS API bağlantısı açıldığında gönderimler burada takip edilecek.")}
+    </section>
   `;
 }
 
@@ -2310,6 +2500,30 @@ function bindForms() {
       "Menü öğesi eklendi",
       "Menü öğesi güncellendi"
     );
+  });
+
+  document.querySelector("#smsSettingsForm")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.target));
+    const tenant = currentTenant();
+    state.smsSettings = {
+      ...state.smsSettings,
+      senderTitle: data.senderTitle || "AYSAH",
+      providerTitle: data.senderTitle || "AYSAH",
+      providerUser: data.providerUser,
+      providerPassword: data.providerPassword,
+      providerApiUrl: data.providerApiUrl,
+      credit: Number(data.credit || 0)
+    };
+    if (tenant) {
+      state.tenantSmsQuotas[tenant.id] = {
+        ...(state.tenantSmsQuotas[tenant.id] || {}),
+        quota: Number(data.tenantQuota || 0)
+      };
+    }
+    saveState();
+    render();
+    showToast("SMS ayarları kaydedildi");
   });
 
   document.querySelector("#detailedReservationForm")?.addEventListener("input", updateQuote);
