@@ -219,6 +219,7 @@ function normalizeState() {
   ensureDemoData();
   assignTenantIds();
   ensureTenantDemoReservations();
+  markTenantDemoReservations();
   saveState();
 }
 
@@ -233,11 +234,20 @@ function normalizeTenants() {
     const demoPlan = demoPlans[index % demoPlans.length];
     const annualFee = Number(tenant.annualFee || demoPlan.annualFee);
     const membershipPaid = Number(tenant.membershipPaid ?? demoPlan.membershipPaid);
+    const startDate = tenant.membershipStartDate || `2026-0${index % 3 + 1}-01`;
+    const endDate = tenant.membershipEndDate || `2026-12-${String(20 + index).padStart(2, "0")}`;
     return {
       membershipPackage: demoPlan.membershipPackage,
       annualFee,
       membershipPaid,
+      membershipStartDate: startDate,
+      membershipEndDate: endDate,
+      renewalDate: tenant.renewalDate || endDate,
+      adminNote: tenant.adminNote || "Sözleşme ve ödeme takibi ana admin tarafından kontrol edilecek.",
+      lastLoginAt: tenant.lastLoginAt || `2026-05-${String(10 + index).padStart(2, "0")} 10:${String(20 + index).padStart(2, "0")}`,
+      lastActivityAt: tenant.lastActivityAt || `2026-05-${String(14 + index).padStart(2, "0")} 16:${String(10 + index).padStart(2, "0")}`,
       ...tenant,
+      status: tenant.status || (index === 2 ? "trial" : "active"),
       annualFee: Number(tenant.annualFee || annualFee),
       membershipPaid: Number(tenant.membershipPaid ?? membershipPaid)
     };
@@ -400,9 +410,21 @@ function ensureTenantDemoReservations() {
         ...sample,
         couple: `${sample.couple} - ${tenant.name}`,
         tenantId: tenant.id,
+        demoReservation: true,
         date: sampleIndex === 0 ? sample.date : sample.date.replace("-09-", "-10-"),
         createdAt: new Date().toLocaleString("tr-TR")
       });
+    });
+  });
+}
+
+function markTenantDemoReservations() {
+  state.tenants.forEach(tenant => {
+    state.reservations = state.reservations.map(reservation => {
+      if (reservation.demoReservation || reservation.tenantId !== tenant.id) return reservation;
+      return String(reservation.couple || "").includes(` - ${tenant.name}`)
+        ? { ...reservation, demoReservation: true }
+        : reservation;
     });
   });
 }
@@ -1203,8 +1225,31 @@ function tenantMatches(tenant, query) {
     tenant.membershipPackage,
     tenant.annualFee,
     tenant.membershipPaid,
-    tenant.status === "active" ? "aktif" : "pasif"
+    tenant.membershipEndDate,
+    tenant.renewalDate,
+    tenant.adminNote,
+    tenant.lastLoginAt,
+    tenant.lastActivityAt,
+    tenantStatusLabel(tenant.status)
   ].some(value => String(value || "").toLocaleLowerCase("tr-TR").includes(needle));
+}
+
+function tenantStatusLabel(status) {
+  return {
+    active: "Aktif",
+    trial: "Deneme",
+    suspended: "Borçtan Kapalı",
+    passive: "Pasif"
+  }[status] || "Aktif";
+}
+
+function tenantStatusClass(status) {
+  return {
+    active: "ok",
+    trial: "info",
+    suspended: "danger",
+    passive: "warn"
+  }[status] || "ok";
 }
 
 function tenantCard(tenant) {
@@ -1213,12 +1258,14 @@ function tenantCard(tenant) {
   const annualFee = Number(tenant.annualFee || 0);
   const membershipPaid = Number(tenant.membershipPaid || 0);
   const membershipDebt = Math.max(0, annualFee - membershipPaid);
+  const hasDebt = membershipDebt > 0;
   return `
     <article class="tenant-card ${selected ? "active" : ""}">
       <div>
         <div class="tenant-card-head">
           <h2>${tenant.name}</h2>
-          <span class="badge ${tenant.status === "active" ? "ok" : "warn"}">${tenant.status === "active" ? "Aktif" : "Pasif"}</span>
+          <span class="badge ${tenantStatusClass(tenant.status)}">${tenantStatusLabel(tenant.status)}</span>
+          ${hasDebt ? `<span class="badge danger">Üyelik borcu var</span>` : `<span class="badge ok">Üyelik ödendi</span>`}
         </div>
         <p class="muted">${tenant.city || "-"} · ${tenant.contactName || "Yetkili yok"} · ${tenant.phone || "Telefon yok"}</p>
         <div class="tenant-login">
@@ -1231,6 +1278,13 @@ function tenantCard(tenant) {
           <span>Tahsilat: <strong class="profit">${money(membershipPaid)}</strong></span>
           <span>Kalan: <strong class="${membershipDebt > 0 ? "danger-text" : "profit"}">${money(membershipDebt)}</strong></span>
         </div>
+        <div class="tenant-followup">
+          <span>Bitiş: <strong>${tenant.membershipEndDate || "-"}</strong></span>
+          <span>Yenileme: <strong>${tenant.renewalDate || "-"}</strong></span>
+          <span>Son giriş: <strong>${tenant.lastLoginAt || "-"}</strong></span>
+          <span>Son işlem: <strong>${tenant.lastActivityAt || "-"}</strong></span>
+        </div>
+        ${tenant.adminNote ? `<p class="tenant-note"><strong>Admin notu:</strong> ${tenant.adminNote}</p>` : ""}
       </div>
       <div class="tenant-metrics">
         <span>${stats.reservations} rezervasyon</span>
@@ -1238,6 +1292,7 @@ function tenantCard(tenant) {
         <small>Tahsilat: ${money(stats.paid)}</small>
         <button class="btn secondary" type="button" data-action="selectTenant" data-id="${tenant.id}">${selected ? "Seçili Mekan" : "Bu Mekana Geç"}</button>
         <button class="btn secondary" type="button" data-action="editTenant" data-id="${tenant.id}">Düzenle</button>
+        <button class="btn danger" type="button" data-action="deleteTenant" data-id="${tenant.id}">Sil</button>
       </div>
     </article>
   `;
@@ -1263,9 +1318,16 @@ function renderTenants() {
             <div class="field"><label>Yetkili Kişi</label><input name="contactName" placeholder="Mekan yetkilisi" value="${attr(editingTenant?.contactName || "")}"></div>
             <div class="field"><label>Telefon</label><input name="phone" placeholder="05xx xxx xx xx" value="${attr(editingTenant?.phone || "")}"></div>
             <div class="field"><label>Şehir</label><input name="city" placeholder="İstanbul" value="${attr(editingTenant?.city || "")}"></div>
+            <div class="field"><label>Mekan Durumu</label><select name="status"><option value="active" ${!editingTenant || editingTenant?.status === "active" ? "selected" : ""}>Aktif</option><option value="trial" ${editingTenant?.status === "trial" ? "selected" : ""}>Deneme</option><option value="suspended" ${editingTenant?.status === "suspended" ? "selected" : ""}>Borçtan Kapalı</option><option value="passive" ${editingTenant?.status === "passive" ? "selected" : ""}>Pasif</option></select></div>
             <div class="field"><label>Üyelik Paketi *</label><select name="membershipPackage" required><option value="Başlangıç" ${editingTenant?.membershipPackage === "Başlangıç" ? "selected" : ""}>Başlangıç</option><option value="Profesyonel" ${!editingTenant || editingTenant?.membershipPackage === "Profesyonel" ? "selected" : ""}>Profesyonel</option><option value="Kurumsal" ${editingTenant?.membershipPackage === "Kurumsal" ? "selected" : ""}>Kurumsal</option></select></div>
             <div class="field"><label>Yıllık Üyelik Ücreti (₺) *</label><input name="annualFee" type="number" min="0" required value="${attr(editingTenant?.annualFee ?? 24000)}"></div>
             <div class="field"><label>Tahsil Edilen (₺)</label><input name="membershipPaid" type="number" min="0" value="${attr(editingTenant?.membershipPaid ?? 0)}"></div>
+            <div class="field"><label>Üyelik Başlangıcı</label><input name="membershipStartDate" type="date" value="${attr(editingTenant?.membershipStartDate || today())}"></div>
+            <div class="field"><label>Üyelik Bitişi</label><input name="membershipEndDate" type="date" value="${attr(editingTenant?.membershipEndDate || `${new Date().getFullYear()}-12-31`)}"></div>
+            <div class="field"><label>Yenileme Tarihi</label><input name="renewalDate" type="date" value="${attr(editingTenant?.renewalDate || editingTenant?.membershipEndDate || `${new Date().getFullYear()}-12-31`)}"></div>
+            <div class="field"><label>Son Giriş</label><input name="lastLoginAt" value="${attr(editingTenant?.lastLoginAt || "")}" placeholder="2026-05-17 10:30"></div>
+            <div class="field"><label>Son İşlem</label><input name="lastActivityAt" value="${attr(editingTenant?.lastActivityAt || "")}" placeholder="2026-05-17 16:45"></div>
+            <div class="field full"><label>Admin Notu</label><textarea name="adminNote" placeholder="Sadece ana adminin göreceği iç not...">${attr(editingTenant?.adminNote || "")}</textarea></div>
           </div>
           <div class="form-actions">
             <button class="btn secondary" type="button" data-action="closeTenantModal">Vazgeç</button>
@@ -1281,6 +1343,9 @@ function renderTenants() {
       ${statCard("Toplam Mekan", state.tenants.length, "□", "blue")}
       ${statCard("Aktif Mekan", activeTenants, "✓", "green")}
       ${statCard("Seçili Mekan", currentTenant()?.name || "-", "◇", "violet")}
+    </div>
+    <div class="toolbar compact-toolbar">
+      <button class="btn secondary" type="button" data-action="clearTenantDemoData">Seçili Mekanın Demo Verisini Temizle</button>
     </div>
     <section class="panel">
       <div class="reservation-search">
@@ -1479,10 +1544,16 @@ function bindForms() {
       contactName: data.contactName,
       phone: data.phone,
       city: data.city,
+      status: data.status || "active",
       membershipPackage: data.membershipPackage,
       annualFee: Number(data.annualFee || 0),
       membershipPaid: Number(data.membershipPaid || 0),
-      status: "active"
+      membershipStartDate: data.membershipStartDate,
+      membershipEndDate: data.membershipEndDate,
+      renewalDate: data.renewalDate,
+      lastLoginAt: data.lastLoginAt,
+      lastActivityAt: data.lastActivityAt,
+      adminNote: data.adminNote
     };
     state.tenants = state.editingTenantId
       ? state.tenants.map(item => item.id === state.editingTenantId ? { ...item, ...tenant } : item)
@@ -1764,6 +1835,40 @@ document.addEventListener("click", event => {
       saveState();
       render();
     }
+    return;
+  }
+  if (action === "deleteTenant") {
+    const tenantId = actionEl?.dataset.id;
+    const tenant = state.tenants.find(item => item.id === tenantId);
+    if (!tenant) return;
+    const ok = confirm(`${tenant.name} silinsin mi? Bu mekana ait rezervasyon kayıtları da kaldırılacak.`);
+    if (!ok) return;
+    state.tenants = state.tenants.filter(item => item.id !== tenantId);
+    state.reservations = state.reservations.filter(item => item.tenantId !== tenantId);
+    tenantScopedCollections
+      .filter(collection => !["reservations"].includes(collection))
+      .forEach(collection => {
+        if (Array.isArray(state[collection])) {
+          state[collection] = state[collection].filter(item => item.tenantId !== tenantId);
+        }
+      });
+    if (state.activeTenantId === tenantId) state.activeTenantId = state.tenants[0]?.id || "";
+    state.showTenantModal = false;
+    state.editingTenantId = null;
+    saveState();
+    render();
+    showToast("Mekan silindi");
+    return;
+  }
+  if (action === "clearTenantDemoData") {
+    const tenant = currentTenant();
+    if (!tenant) return;
+    const beforeCount = state.reservations.length;
+    state.reservations = state.reservations.filter(item => !(item.tenantId === tenant.id && item.demoReservation));
+    const removedCount = beforeCount - state.reservations.length;
+    saveState();
+    render();
+    showToast(removedCount ? `${tenant.name} demo rezervasyonları temizlendi` : "Temizlenecek demo rezervasyon yok");
     return;
   }
   if (action === "focusTenantForm") {

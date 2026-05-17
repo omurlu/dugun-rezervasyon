@@ -69,6 +69,18 @@ Mekanlar listesinde bu bilgiler her mekan kartinda gorunur. Bu alanlar ana admin
 
 Demo mekanlarda uyelik finans alanlari bos kalmasin diye ornek paket/ucret/tahsilat/kalan borc verileri otomatik tamamlanir.
 
+Ek ana admin takip alanlari eklendi:
+
+- Mekan durumu: aktif, deneme, borctan kapali, pasif.
+- Uyelik baslangic, bitis ve yenileme tarihi.
+- Uyelik borcu varsa mekan kartinda uyari.
+- Ana adminin sadece kendisi icin tutacagi admin notu.
+- Son giris ve son islem bilgisi.
+- Secili mekanin demo rezervasyonlarini temizleme butonu.
+- Mekan kartlarinda onayli silme butonu.
+
+Bu alanlar mekanin kendi rezervasyon muhasebesinden ayridir; platform sahibinin musteri/mekan takibi icindir.
+
 ## GitHub baglantisi
 
 GitHub deposu olarak su adres not edildi:
