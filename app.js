@@ -1068,7 +1068,8 @@ function saveManagedItem(collection, item, addedMessage, updatedMessage) {
 
 function syncNavigation(view) {
   document.querySelectorAll(".nav-link").forEach(link => {
-    link.classList.toggle("active", link.dataset.view === view);
+    const target = link.dataset.view;
+    link.classList.toggle("active", target === view || (target === "suppliers" && view === "supplierAccount"));
   });
   document.querySelectorAll(".top-nav a").forEach(link => {
     const target = link.dataset.view;
@@ -2729,40 +2730,12 @@ function supplierAccountReport(transactions) {
 }
 
 function renderSuppliers() {
-  const suppliers = scopedItems("suppliers");
-  const editingSupplier = state.editingSupplierId ? state.suppliers.find(item => item.id === state.editingSupplierId) : null;
-  const editingTransaction = state.editingSupplierTransactionId ? state.supplierTransactions.find(item => item.id === state.editingSupplierTransactionId) : null;
-  const transactions = filteredSupplierTransactions();
-  root.innerHTML = `
-    ${pageHeader("Tedarikçi Yönetimi", `<div class="row-actions"><button class="btn secondary" type="button" data-action="newSupplierTransaction">+ Cari Hareket</button><button class="btn" type="button" data-action="newSupplier">+ Yeni Tedarikçi Ekle</button></div>`)}
-    ${supplierModal(editingSupplier)}
-    ${supplierTransactionModal(editingTransaction)}
-    ${supplierAccountReport(transactions)}
-    <section class="panel">
-      <h2>Tedarikçi Tanımları</h2>
-    <div class="category-grid">
-      ${suppliers.map(item => `
-        <article class="mini-card">
-          <h3>${item.name}</h3>
-          <span class="tag">${item.category}</span>
-          <p class="muted">☎ ${item.phone || "-"}${item.contactName ? ` · ${item.contactName}` : ""}</p>
-          ${item.email ? `<p class="muted">${item.email}</p>` : ""}
-          ${item.note ? `<p>${item.note}</p>` : ""}
-          <div class="row-actions">
-            <button class="small-icon text" type="button" data-action="editSupplier" data-id="${item.id}">Düzenle</button>
-            ${state.pendingSupplierDeleteId === item.id
-              ? `<button class="small-icon text delete" type="button" data-action="confirmDeleteSupplier" data-id="${item.id}">Silinsin mi?</button><button class="small-icon text" type="button" data-action="cancelSupplierDelete">Vazgeç</button>`
-              : `<button class="small-icon text delete" type="button" data-action="deleteSupplier" data-id="${item.id}">Sil</button>`}
-          </div>
-        </article>
-      `).join("") || empty("Tedarikçi tanımı yok", "Yeni Tedarikçi Ekle ile ilk tedarikçiyi oluşturabilirsiniz.")}
-    </div>
-    </section>
-  `;
+  renderSupplierAccount();
 }
 
 function renderSupplierAccount() {
   const suppliers = scopedItems("suppliers");
+  const editingSupplier = state.editingSupplierId ? state.suppliers.find(item => item.id === state.editingSupplierId) : null;
   const editingTransaction = state.editingSupplierTransactionId ? state.supplierTransactions.find(item => item.id === state.editingSupplierTransactionId) : null;
   const allTransactions = scopedItems("supplierTransactions");
   const transactions = filteredSupplierTransactions();
@@ -2794,8 +2767,24 @@ function renderSupplierAccount() {
     map[key].paid += Number(item.paid || 0);
     return map;
   }, {})).sort((a, b) => b.amount - a.amount);
+  const supplierCards = suppliers.map(item => `
+    <article class="mini-card">
+      <h3>${item.name}</h3>
+      <span class="tag">${item.category}</span>
+      <p class="muted">☎ ${item.phone || "-"}${item.contactName ? ` · ${item.contactName}` : ""}</p>
+      ${item.email ? `<p class="muted">${item.email}</p>` : ""}
+      ${item.note ? `<p>${item.note}</p>` : ""}
+      <div class="row-actions">
+        <button class="small-icon text" type="button" data-action="editSupplier" data-id="${item.id}">Düzenle</button>
+        ${state.pendingSupplierDeleteId === item.id
+          ? `<button class="small-icon text delete" type="button" data-action="confirmDeleteSupplier" data-id="${item.id}">Silinsin mi?</button><button class="small-icon text" type="button" data-action="cancelSupplierDelete">Vazgeç</button>`
+          : `<button class="small-icon text delete" type="button" data-action="deleteSupplier" data-id="${item.id}">Sil</button>`}
+      </div>
+    </article>
+  `).join("");
   root.innerHTML = `
-    ${pageHeader("Tedarikçi Cari Hareketleri", `<button class="btn" type="button" data-action="newSupplierTransaction">+ Yeni Hareket Ekle</button>`)}
+    ${pageHeader("Tedarikçi ve Cari Yönetimi", `<div class="row-actions"><button class="btn secondary" type="button" data-action="newSupplierTransaction">+ Cari Hareket</button><button class="btn" type="button" data-action="newSupplier">+ Yeni Tedarikçi Ekle</button></div>`)}
+    ${supplierModal(editingSupplier)}
     ${supplierTransactionModal(editingTransaction)}
     <div class="stats-grid">
       ${statCard("Toplam Tutar", money(totals.amount), "⌄", "orange")}
@@ -2838,6 +2827,12 @@ function renderSupplierAccount() {
         })) : empty("Detaylı rapor için hareket yok", "Cari hareket ekledikçe ürün/hizmet kırılımı burada oluşur.")}
       </section>
     ` : ""}
+    <section class="panel">
+      <h2>Tedarikçi Tanımları</h2>
+      <div class="category-grid">
+        ${supplierCards || empty("Tedarikçi tanımı yok", "Yeni Tedarikçi Ekle ile ilk tedarikçiyi oluşturabilirsiniz.")}
+      </div>
+    </section>
   `;
 }
 

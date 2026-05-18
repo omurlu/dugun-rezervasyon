@@ -208,6 +208,10 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 ## Tedarikci Cari Notu
 
 - `Tedarikci Cari` ekranindaki `Genel Ozet`, `Tum Hareketler` ve `Detayli Rapor` sekmeleri calisir hale getirildi.
+- `Tedarikci` ve `Tedarikci Cari` artik tek ekranda toplandi: sayfa basligi `Tedarikci ve Cari Yonetimi`.
+- Sol menude ayri `Tedarikci Cari` satiri kaldirildi; eski `#supplierAccount` adresi acilirsa yine ayni birlesik ekrana gider.
+- Birlesik ekranda ustte cari ozet/raporlar, altta tedarikci tanim kartlari bulunur.
+- `+ Cari Hareket` ve `+ Yeni Tedarikci Ekle` butonlari ayni sayfanin sag ustunde yer alir.
 - Genel ozet tedarikci bazinda toplam tutar, odenen, kalan borc ve islem sayisini gosterir.
 - Genel ozet tablosundaki `Detay` butonu ilgili tedarikcinin hareketlerini filtreleyip `Tum Hareketler` sekmesine gecirir.
 - `Tum Hareketler` sekmesi tedarikci, urun/hizmet ve tarih araligi filtreleriyle mevcut cari raporu gosterir.
