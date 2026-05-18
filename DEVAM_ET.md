@@ -205,6 +205,15 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - Kasa ekraninda organizasyon, hareket tipi ve tarih araligi filtreleri bulunur.
 - Sayfanin altina sabit kasa bari eklendi: kasa bakiyesi, bugun giris ve bugun cikis bilgisi her ekranda gorunur.
 
+## Tedarikci Cari Notu
+
+- `Tedarikci Cari` ekranindaki `Genel Ozet`, `Tum Hareketler` ve `Detayli Rapor` sekmeleri calisir hale getirildi.
+- Genel ozet tedarikci bazinda toplam tutar, odenen, kalan borc ve islem sayisini gosterir.
+- Genel ozet tablosundaki `Detay` butonu ilgili tedarikcinin hareketlerini filtreleyip `Tum Hareketler` sekmesine gecirir.
+- `Tum Hareketler` sekmesi tedarikci, urun/hizmet ve tarih araligi filtreleriyle mevcut cari raporu gosterir.
+- `Detayli Rapor` sekmesi urun/hizmet bazinda tedarikci toplamlarini, odenen ve kalan tutarlari listeler.
+- `+ Yeni Hareket Ekle` butonu bu ekranda da tedarikci cari hareketi popup'ini acar.
+
 ## GitHub baglantisi
 
 GitHub deposu olarak su adres not edildi:

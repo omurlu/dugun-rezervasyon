@@ -2745,23 +2745,76 @@ function renderSuppliers() {
 }
 
 function renderSupplierAccount() {
-  const total = state.suppliers.reduce((sum, item) => sum + item.balance, 0);
-  const paid = Math.abs(total);
+  const suppliers = scopedItems("suppliers");
+  const editingTransaction = state.editingSupplierTransactionId ? state.supplierTransactions.find(item => item.id === state.editingSupplierTransactionId) : null;
+  const allTransactions = scopedItems("supplierTransactions");
+  const transactions = filteredSupplierTransactions();
+  const totals = supplierTransactionTotals(transactions);
+  const remaining = totals.amount - totals.paid;
+  const activeTab = state.supplierAccountTab || "summary";
+  const supplierRows = suppliers.map(supplier => {
+    const rows = allTransactions.filter(item => item.supplierId === supplier.id);
+    const rowTotals = supplierTransactionTotals(rows);
+    const rowRemaining = rowTotals.amount - rowTotals.paid;
+    return [
+      `<strong>${supplier.name}</strong><br><small>${supplier.category || "-"}</small>`,
+      money(rowTotals.amount),
+      `<span class="profit">${money(rowTotals.paid)}</span>`,
+      `<span class="${rowRemaining > 0 ? "danger-text" : "profit"}">${money(rowRemaining)}</span>`,
+      rowTotals.count,
+      `<button class="btn secondary mini" type="button" data-action="supplierAccountDetail" data-id="${supplier.id}">Detay</button>`
+    ];
+  });
+  const productRows = Object.values(allTransactions.reduce((map, item) => {
+    const key = `${item.supplierId || "none"}_${item.product || "Belirtilmedi"}`;
+    if (!map[key]) {
+      map[key] = { supplierId: item.supplierId, product: item.product || "Belirtilmedi", count: 0, amount: 0, paid: 0 };
+    }
+    map[key].count += 1;
+    map[key].amount += Number(item.amount || 0);
+    map[key].paid += Number(item.paid || 0);
+    return map;
+  }, {})).sort((a, b) => b.amount - a.amount);
   root.innerHTML = `
-    ${pageHeader("Tedarikçi Cari Hareketleri", `<button class="btn">+ Yeni Hareket Ekle</button>`)}
-    <div class="stats-grid three-cols">
-      ${statCard("Toplam Alacak", money(total), "⌄", "red")}
-      ${statCard("Aktif Tedarikçi", state.suppliers.length, "$", "green")}
-      ${statCard("Toplam İşlem", 18, "▤", "blue")}
+    ${pageHeader("Tedarikçi Cari Hareketleri", `<button class="btn" type="button" data-action="newSupplierTransaction">+ Yeni Hareket Ekle</button>`)}
+    ${supplierTransactionModal(editingTransaction)}
+    <div class="stats-grid">
+      ${statCard("Toplam Tutar", money(totals.amount), "⌄", "orange")}
+      ${statCard("Ödenen", money(totals.paid), "$", "green")}
+      ${statCard("Kalan Borç", money(remaining), "▤", remaining > 0 ? "red" : "green")}
+      ${statCard("İşlem", transactions.length, "☷", "blue")}
     </div>
-    <div class="tabs three"><button class="tab active">Genel Özet</button><button class="tab">Tüm Hareketler</button><button class="tab">Detaylı Rapor</button></div>
-    <section class="panel">
-      <h2>Tedarikçi Özet Raporu</h2>
-      ${table(["Tedarikçi", "Toplam Tutar", "Ödenen", "Kalan Borç", "İşlemler"], [
-        ...state.suppliers.map(item => [item.name, money(0), `<span class="profit">${money(Math.abs(item.balance))}</span>`, `<span class="danger-text">${money(item.balance)}</span>`, `<button class="btn secondary">Detay</button>`]),
-        ["<strong>TOPLAM</strong>", `<strong>${money(0)}</strong>`, `<strong class="profit">${money(paid)}</strong>`, `<strong class="danger-text">${money(total)}</strong>`, ""]
-      ])}
-    </section>
+    <div class="tabs three">
+      <button class="tab ${activeTab === "summary" ? "active" : ""}" type="button" data-action="setSupplierAccountTab" data-tab="summary">Genel Özet</button>
+      <button class="tab ${activeTab === "movements" ? "active" : ""}" type="button" data-action="setSupplierAccountTab" data-tab="movements">Tüm Hareketler</button>
+      <button class="tab ${activeTab === "details" ? "active" : ""}" type="button" data-action="setSupplierAccountTab" data-tab="details">Detaylı Rapor</button>
+    </div>
+    ${activeTab === "summary" ? `
+      <section class="panel">
+        <h2>Tedarikçi Özet Raporu</h2>
+        ${supplierRows.length ? table(["Tedarikçi", "Toplam Tutar", "Ödenen", "Kalan Borç", "İşlem", "Detay"], [
+          ...supplierRows,
+          ["<strong>TOPLAM</strong>", `<strong>${money(totals.amount)}</strong>`, `<strong class="profit">${money(totals.paid)}</strong>`, `<strong class="${remaining > 0 ? "danger-text" : "profit"}">${money(remaining)}</strong>`, `<strong>${transactions.length}</strong>`, ""]
+        ]) : empty("Tedarikçi kaydı yok", "Önce tedarikçi tanımı ve cari hareket ekleyin.")}
+      </section>
+    ` : ""}
+    ${activeTab === "movements" ? supplierAccountReport(transactions) : ""}
+    ${activeTab === "details" ? `
+      <section class="panel">
+        <h2>Ürün / Hizmet Bazlı Detaylı Rapor</h2>
+        ${productRows.length ? table(["Tedarikçi", "Ürün / Hizmet", "İşlem", "Toplam", "Ödenen", "Kalan"], productRows.map(item => {
+          const rest = item.amount - item.paid;
+          return [
+            supplierName(item.supplierId),
+            item.product,
+            item.count,
+            money(item.amount),
+            `<span class="profit">${money(item.paid)}</span>`,
+            `<span class="${rest > 0 ? "danger-text" : "profit"}">${money(rest)}</span>`
+          ];
+        })) : empty("Detaylı rapor için hareket yok", "Cari hareket ekledikçe ürün/hizmet kırılımı burada oluşur.")}
+      </section>
+    ` : ""}
   `;
 }
 
@@ -2789,7 +2842,7 @@ function cashTransactionForm() {
         <div class="form-grid">
           <div class="field"><label>İşlem Tipi</label><select name="direction"><option value="expense">Çıkış / Masraf</option><option value="income">Giriş / Tahsilat</option></select></div>
           <div class="field"><label>Organizasyon</label><select name="reservationId"><option value="">Genel gider / organizasyonsuz</option>${reservations.map(item => `<option value="${item.id}">${reservationLabel(item.id)}</option>`).join("")}</select></div>
-          <div class="field"><label>Kategori</label><input name="category" list="cashCategories" required placeholder="Elektrik, kira, ek tahsilat..."><datalist id="cashCategories">${expenseCategories.map(item => `<option value="${item}"></option>`).join("")}</datalist></div>
+          <div class="field"><label>Kategori</label><select name="category" required><option value="">Kategori seçin</option>${expenseCategories.map(item => `<option value="${item}">${item}</option>`).join("")}<option value="Ek Tahsilat">Ek Tahsilat</option></select></div>
           <div class="field"><label>Tarih</label><input name="date" type="date" value="${today()}"></div>
           <div class="field"><label>Tutar</label><input name="amount" type="number" min="0" required placeholder="0"></div>
           <div class="field"><label>Açıklama</label><input name="description" placeholder="Örn: Mina organizasyonu çiçek ek masrafı"></div>
@@ -4012,6 +4065,20 @@ document.addEventListener("click", event => {
     saveState();
     render();
     showToast("Tedarikçi hareketi silindi");
+    return;
+  }
+  if (action === "setSupplierAccountTab") {
+    state.supplierAccountTab = actionEl?.dataset.tab || "summary";
+    saveState();
+    render();
+    return;
+  }
+  if (action === "supplierAccountDetail") {
+    state.supplierReportSupplierId = actionEl?.dataset.id || "";
+    state.supplierReportProduct = "";
+    state.supplierAccountTab = "movements";
+    saveState();
+    render();
     return;
   }
   if (action === "deleteCashTransaction") {
