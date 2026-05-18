@@ -221,7 +221,8 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 
 - `Menu Kategorileri` ve `Yemek Menusu` tek ekranda birlestirildi.
 - Sol menude ayri `Menu Kategorileri` satiri kaldirildi; eski `#menuCategories` adresi acilirsa yine `Yemek Menusu` birlesik ekranina gider.
-- Birlesik ekranda ustte kategori ekleme/duzenleme ve kategori kartlari, altta yemek/ikram kalemi ekleme/duzenleme ve mevcut menu listesi bulunur.
+- Birlesik ekranda onem sirasi duzenlendi: ustte yemek/ikram kalemi ekleme ve mevcut menu listesi, altta kategori ayarlari bulunur.
+- Genel tasarim prensibi: her bolumde gunluk kullanilan/asli isler ustte, tanim/ayar gibi ikinci onemli alanlar altta tutulacak.
 - Kuru pasta, pogaca, kola/limitsiz mesrubat gibi kalemler `Yemek Menusu` tarafinda musterinin sececegi menu olarak durur; arka tarafta `Stok Baglantisi` ile depodan dusurulur.
 - Menu tanimina `Hazirlama Sekli` eklendi: mekan mutfagi/asci, disaridan hazir alim, stoktan hazir tuketim veya sadece hizmet.
 - Menu tanimina tedarikci, stok baglantisi, kisi basi stok cikisi ve stok hesaplama sekli eklendi.
