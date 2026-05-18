@@ -139,8 +139,9 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - Rapor basliginin yanindaki ekstra gorevlendirme butonu kaldirildi; yeni gorevlendirme ana sayfa basligindaki butondan acilir.
 - Ayrica `Gorev ve Yevmiye Hareketleri` kart bolumu kaldirildi; ayni hareketlerin duzenle/sil islemleri artik Personel Hareket Raporu tablosunda yapilir.
 - Personel Hareket Raporu tablosunun en sagina net `Odeme Isle` butonu eklendi; personele o gorev icin odeme yapildiginda bu butondan gorev acilip `Odenen` tutari islenir.
-- Personel kartlarina `Guncelle` akisi eklendi; karta basinca personelin katildigi etkinlikler kart icinde listelenir ve her etkinligin yanindaki `Odeme Isle` ile o goreve ait odeme islenir.
-- Odeme islemi daha anlasilir olsun diye personel hareket tablosunda ve personel karti etkinlik listesinde ilgili gorev yanindaki buton `Odeme Isle` olarak adlandirildi.
+- Personel kartlari sade tutuldu: telefon ve kart icindeki katildigi etkinlikler listesi kaldirildi; kartta isim, gorev, toplam gorev sayisi, genel yevmiye, odenen, kalan, duzenle ve sil kalir.
+- Odeme islemi daha anlasilir olsun diye Personel Hareket Raporu tablosunda ilgili gorev yanindaki buton `Odeme Isle` olarak adlandirildi.
+- Personel Hareket Raporu'ndaki Personel, Organizasyon, Toplam Gorev, Toplam Yevmiye, Odenen ve Kalan Alacak ozet kutulari pastel renklerle ayrildi.
 
 ## GitHub baglantisi
 

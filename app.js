@@ -2218,39 +2218,6 @@ function staffAssignmentCard(assignment) {
   `;
 }
 
-function staffCardMovements(staffId) {
-  const assignments = scopedItems("staffAssignments")
-    .filter(item => item.staffId === staffId)
-    .slice()
-    .sort((a, b) => b.date.localeCompare(a.date));
-  if (!assignments.length) {
-    return `<div class="person-movements">${empty("Bu personele ait görev yok", "İlk görev kaydı için + Görevlendirme butonunu kullanabilirsiniz.")}</div>`;
-  }
-  return `
-    <div class="person-movements">
-      <h3>Katıldığı Etkinlikler</h3>
-      ${assignments.map(assignment => {
-        const reservation = state.reservations.find(item => item.id === assignment.reservationId);
-        const remaining = Number(assignment.dailyWage || 0) - Number(assignment.paid || 0);
-        return `
-          <article class="person-movement-row">
-            <div>
-              <strong>${reservation?.couple || "Rezervasyon bulunamadı"}</strong>
-              <span>${new Date(assignment.date).toLocaleDateString("tr-TR")} · ${assignment.role || "Görev"} · ${reservation?.hallName || ""}</span>
-            </div>
-            <div class="person-movement-money">
-              <span>Yevmiye: <strong>${money(assignment.dailyWage)}</strong></span>
-              <span>Ödenen: <strong class="profit">${money(assignment.paid)}</strong></span>
-              <span>Kalan: <strong class="${remaining > 0 ? "danger-text" : "profit"}">${money(remaining)}</strong></span>
-            </div>
-            <button class="table-action-btn pay" type="button" data-action="editStaffAssignment" data-id="${assignment.id}">Ödeme İşle</button>
-          </article>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
-
 function staffMovementReport(assignments) {
   const staff = scopedItems("staff");
   const reservations = visibleReservations()
@@ -2322,17 +2289,15 @@ function renderStaff() {
           <span class="status ${item.active ? "ok" : ""}">${item.active ? "Aktif" : "Pasif"}</span>
           <h2>${item.name}</h2>
           <p>${item.role}</p>
-          <div class="person-meta"><span>☎ ${item.phone || "-"}</span><span>□ ${totals.count} görev</span><span>Genel yevmiye: <strong>${money(totals.total)}</strong></span><span>Ödenen: <strong class="profit">${money(totals.paid)}</strong></span><span>Kalan: <strong class="${remaining > 0 ? "danger-text" : "profit"}">${money(remaining)}</strong></span></div>
+          <div class="person-meta"><span>Toplam görev: <strong>${totals.count}</strong></span><span>Genel yevmiye: <strong>${money(totals.total)}</strong></span><span>Ödenen: <strong class="profit">${money(totals.paid)}</strong></span><span>Kalan: <strong class="${remaining > 0 ? "danger-text" : "profit"}">${money(remaining)}</strong></span></div>
             `;
           })()}
           <div class="row-actions">
-            <button class="small-icon text" type="button" data-action="toggleStaffMovements" data-id="${item.id}">${state.expandedStaffId === item.id ? "Kapat" : "Güncelle"}</button>
             <button class="small-icon text" type="button" data-action="editStaff" data-id="${item.id}">Düzenle</button>
             ${state.pendingStaffDeleteId === item.id
               ? `<button class="small-icon text delete confirm-delete" type="button" data-action="confirmDeleteStaff" data-id="${item.id}">Silinsin mi?</button><button class="small-icon text" type="button" data-action="cancelStaffDelete">Vazgeç</button>`
               : `<button class="small-icon text delete" type="button" data-action="deleteStaff" data-id="${item.id}">Sil</button>`}
           </div>
-          ${state.expandedStaffId === item.id ? staffCardMovements(item.id) : ""}
         </article>
       `).join("") || empty("Personel kaydı yok", "Yeni Personel Ekle alanından ilk personeli oluşturabilirsiniz.")}
     </div>
@@ -3182,13 +3147,6 @@ document.addEventListener("click", event => {
     saveState();
     render();
     document.querySelector("#staffForm input[name='name']")?.focus();
-    return;
-  }
-  if (action === "toggleStaffMovements") {
-    const id = actionEl?.dataset.id || null;
-    state.expandedStaffId = state.expandedStaffId === id ? null : id;
-    saveState();
-    render();
     return;
   }
   if (action === "cancelStaffEdit") {
