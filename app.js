@@ -97,6 +97,7 @@ const seed = {
     { id: makeId(), name: "Video Prodüksiyonu", category: "Video", phone: "0536 555 8899", balance: -10000 }
   ],
   supplierTransactions: [],
+  stockMovements: [],
   cashTransactions: [],
   specialDays: [
     { date: "2026-01-01", title: "Yılbaşı" },
@@ -194,7 +195,7 @@ const toast = document.querySelector("#toast");
 const sidebar = document.querySelector(".sidebar");
 const accountPill = document.querySelector("#accountPill");
 const smsCreditPill = document.querySelector("#smsCreditPill");
-const tenantScopedCollections = ["organizationTypes", "halls", "packages", "extras", "menuCategories", "menus", "reservations", "smsTemplates", "stock", "staff", "staffAssignments", "suppliers", "supplierTransactions", "cashTransactions"];
+const tenantScopedCollections = ["organizationTypes", "halls", "packages", "extras", "menuCategories", "menus", "reservations", "smsTemplates", "stock", "stockMovements", "staff", "staffAssignments", "suppliers", "supplierTransactions", "cashTransactions"];
 normalizeState();
 
 function loadState() {
@@ -221,6 +222,7 @@ function normalizeState() {
   if (!Array.isArray(state.reservations)) state.reservations = [];
   if (!Array.isArray(state.staffAssignments)) state.staffAssignments = [];
   if (!Array.isArray(state.supplierTransactions)) state.supplierTransactions = [];
+  if (!Array.isArray(state.stockMovements)) state.stockMovements = [];
   if (!Array.isArray(state.cashTransactions)) state.cashTransactions = [];
   ensureDemoData();
   assignTenantIds();
@@ -2328,29 +2330,169 @@ function renderSms() {
 }
 
 function renderStock() {
-  const low = state.stock.filter(item => item.quantity <= item.minimum);
+  const stockItems = scopedItems("stock");
+  const movements = filteredStockMovements();
+  const low = stockItems.filter(item => Number(item.quantity || 0) <= Number(item.minimum || 0));
+  const totalValue = stockItems.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitCost || 0), 0);
+  const potentialSale = stockItems.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitSalePrice || 0), 0);
+  const editingStock = state.editingStockId ? state.stock.find(item => item.id === state.editingStockId) : null;
+  const editingMovement = state.editingStockMovementId ? state.stockMovements.find(item => item.id === state.editingStockMovementId) : null;
   root.innerHTML = `
-    ${pageHeader("Stok Yönetimi", `<button class="btn">+ Yeni Stok Ekle</button>`)}
-    <div class="alert">△ <strong>Düşük Stok Uyarısı!</strong><br>${low.length} ürünün stoğu minimum seviyenin altında</div>
+    ${pageHeader("Stok Takibi", `<div class="row-actions"><button class="btn secondary" type="button" data-action="newStockMovement">+ Stok Hareketi</button><button class="btn" type="button" data-action="newStock">+ Yeni Stok Kartı</button></div>`)}
+    ${stockModal(editingStock)}
+    ${stockMovementModal(editingMovement)}
+    ${low.length ? `<div class="alert">△ <strong>Düşük Stok Uyarısı!</strong><br>${low.length} ürün minimum seviyede veya altında.</div>` : ""}
     <div class="stats-grid">
-      ${statCard("Toplam Ürün", state.stock.length, "◇", "violet")}
+      ${statCard("Toplam Ürün", stockItems.length, "◇", "violet")}
       ${statCard("Düşük Stok", low.length, "⌄", "red")}
-      ${statCard("Kategoriler", new Set(state.stock.map(i => i.category)).size, "⬡", "green")}
-      ${statCard("Lokasyonlar", new Set(state.stock.map(i => i.location)).size, "▣", "blue")}
+      ${statCard("Stok Maliyeti", money(totalValue), "▣", "orange")}
+      ${statCard("Tahmini Satış", money(potentialSale), "↗", "green")}
     </div>
-    <section class="panel">
-      <h2>Stok Listesi</h2>
-      ${table(["Ürün Adı", "Kategori", "Miktar", "Min. Miktar", "Birim", "Konum", "Durum", "İşlemler"], state.stock.map(item => [
-        `<strong>${item.name}</strong>`,
-        item.category,
-        `<strong>${item.quantity}</strong>`,
-        item.minimum,
-        item.unit,
-        item.location,
-        stockBadge(item),
-        `<button class="table-icon">✎</button><button class="table-icon delete">⌫</button>`
-      ]))}
+    <section class="panel cash-filter-panel">
+      <h2>Stok Hareket Raporu</h2>
+      <div class="filters supplier-report-filters">
+        <div class="field"><label>Ürün</label><select id="stockReportStock"><option value="">Tüm ürünler</option>${stockItems.map(item => `<option value="${item.id}" ${state.stockReportStockId === item.id ? "selected" : ""}>${item.name}</option>`).join("")}</select></div>
+        <div class="field"><label>Organizasyon</label><select id="stockReportReservation"><option value="">Tüm organizasyonlar</option>${visibleReservations().filter(item => !item.comparisonDemoReservation).map(item => `<option value="${item.id}" ${state.stockReportReservationId === item.id ? "selected" : ""}>${reservationLabel(item.id)}</option>`).join("")}</select></div>
+        <div class="field"><label>Başlangıç</label><input id="stockReportStart" type="date" value="${state.stockReportStart || `${state.year}-01-01`}"></div>
+        <div class="field"><label>Bitiş</label><input id="stockReportEnd" type="date" value="${state.stockReportEnd || `${state.year}-12-31`}"></div>
+      </div>
+      ${movements.length ? table(["Tarih", "Ürün", "Hareket", "Miktar", "Tedarikçi", "Organizasyon", "Alış", "Satış", "Not", ""], movements.map(item => [
+        new Date(item.date).toLocaleDateString("tr-TR"),
+        stockName(item.stockId),
+        `<span class="badge ${item.direction === "in" ? "ok" : item.direction === "out" ? "warn" : "danger"}">${stockMovementLabel(item.direction)}</span>`,
+        `${Number(item.quantity || 0)} ${item.unit || stockUnit(item.stockId)}`,
+        item.supplierId ? supplierName(item.supplierId) : "-",
+        item.reservationId ? reservationLabel(item.reservationId) : "Genel",
+        money(Number(item.quantity || 0) * Number(item.unitCost || 0)),
+        money(Number(item.quantity || 0) * Number(item.unitSalePrice || 0)),
+        item.note || "-",
+        `<div class="table-actions"><button class="table-action-btn pay" type="button" data-action="editStockMovement" data-id="${item.id}">Düzenle</button><button class="table-action-btn delete" type="button" data-action="deleteStockMovement" data-id="${item.id}">Sil</button></div>`
+      ])) : empty("Stok hareketi yok", "Ürün girişi, organizasyona kullanım veya fire hareketi ekleyin.")}
     </section>
+    <section class="panel">
+      <h2>Stok Kartları</h2>
+      ${stockItems.length ? table(["Ürün Adı", "Kategori", "Miktar", "Min.", "Birim", "Konum", "Tedarikçi", "Alış", "Satış", "Durum", "İşlemler"], stockItems.map(item => [
+        `<strong>${item.name}</strong>`,
+        item.category || "-",
+        `<strong>${Number(item.quantity || 0)}</strong>`,
+        Number(item.minimum || 0),
+        item.unit || "adet",
+        item.location || "-",
+        item.supplierId ? supplierName(item.supplierId) : "-",
+        money(item.unitCost || 0),
+        money(item.unitSalePrice || 0),
+        stockBadge(item),
+        `<div class="table-actions"><button class="table-action-btn pay" type="button" data-action="editStock" data-id="${item.id}">Düzenle</button>${state.pendingStockDeleteId === item.id ? `<button class="table-action-btn delete" type="button" data-action="confirmDeleteStock" data-id="${item.id}">Silinsin mi?</button><button class="table-action-btn" type="button" data-action="cancelStockDelete">Vazgeç</button>` : `<button class="table-action-btn delete" type="button" data-action="deleteStock" data-id="${item.id}">Sil</button>`}</div>`
+      ])) : empty("Stok kartı yok", "Yeni Stok Kartı ile depo ürünlerinizi tanımlayın.")}
+    </section>
+  `;
+}
+
+function stockName(id) {
+  return scopedItems("stock").find(item => item.id === id)?.name || "Stok seçilmedi";
+}
+
+function stockUnit(id) {
+  return scopedItems("stock").find(item => item.id === id)?.unit || "adet";
+}
+
+function stockMovementLabel(direction) {
+  return {
+    in: "Giriş",
+    out: "Organizasyona Kullanım",
+    waste: "Fire / Kayıp"
+  }[direction] || "Hareket";
+}
+
+function stockMovementDelta(item) {
+  const quantity = Number(item.quantity || 0);
+  return item.direction === "in" ? quantity : -quantity;
+}
+
+function applyStockQuantity(stockId, delta) {
+  if (!stockId || !delta) return;
+  state.stock = state.stock.map(item => item.id === stockId ? { ...item, quantity: Math.max(0, Number(item.quantity || 0) + delta) } : item);
+}
+
+function filteredStockMovements() {
+  const stockId = state.stockReportStockId || "";
+  const reservationId = state.stockReportReservationId || "";
+  const start = state.stockReportStart || `${state.year}-01-01`;
+  const end = state.stockReportEnd || `${state.year}-12-31`;
+  return scopedItems("stockMovements")
+    .filter(item => !stockId || item.stockId === stockId)
+    .filter(item => !reservationId || item.reservationId === reservationId)
+    .filter(item => (!start || item.date >= start) && (!end || item.date <= end))
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function stockModal(editing = null) {
+  if (!state.showStockModal && !editing) return "";
+  const suppliers = scopedItems("suppliers");
+  return `
+    <div class="modal-backdrop" data-action="closeStockModal">
+      <section class="modal-panel" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <h2>${editing ? "Stok Kartını Düzenle" : "Yeni Stok Kartı"}</h2>
+          <button class="icon-button" type="button" data-action="closeStockModal" aria-label="Kapat">×</button>
+        </div>
+        <form id="stockForm">
+          <div class="form-grid">
+            <div class="field"><label>Ürün / Malzeme Adı *</label><input name="name" required value="${attr(editing?.name || "")}" placeholder="Örn: Yürüyüş yolu çiçeği"></div>
+            <div class="field"><label>Kategori *</label><input name="category" required value="${attr(editing?.category || "")}" placeholder="Dekorasyon, yiyecek, ekipman..."></div>
+            <div class="field"><label>Tedarikçi</label><select name="supplierId"><option value="">Tedarikçi seçin</option>${suppliers.map(item => `<option value="${item.id}" ${editing?.supplierId === item.id ? "selected" : ""}>${item.name}</option>`).join("")}</select></div>
+            <div class="field"><label>Mevcut Miktar *</label><input name="quantity" type="number" min="0" step="0.01" required value="${attr(editing?.quantity ?? 0)}"></div>
+            <div class="field"><label>Minimum Stok</label><input name="minimum" type="number" min="0" step="0.01" value="${attr(editing?.minimum ?? 0)}"></div>
+            <div class="field"><label>Birim</label><select name="unit"><option value="adet" ${(editing?.unit || "adet") === "adet" ? "selected" : ""}>Adet</option><option value="paket" ${editing?.unit === "paket" ? "selected" : ""}>Paket</option><option value="metre" ${editing?.unit === "metre" ? "selected" : ""}>Metre</option><option value="set" ${editing?.unit === "set" ? "selected" : ""}>Set</option><option value="kg" ${editing?.unit === "kg" ? "selected" : ""}>Kg</option></select></div>
+            <div class="field"><label>Konum</label><input name="location" value="${attr(editing?.location || "")}" placeholder="Depo A, mutfak, ofis..."></div>
+            <div class="field"><label>Birim Alış (₺)</label><input name="unitCost" type="number" min="0" step="0.01" value="${attr(editing?.unitCost ?? 0)}"></div>
+            <div class="field"><label>Birim Satış (₺)</label><input name="unitSalePrice" type="number" min="0" step="0.01" value="${attr(editing?.unitSalePrice ?? 0)}"></div>
+            <div class="field full"><label>Not</label><textarea name="note" placeholder="Kullanım, temizlik, teslimat veya depo notu...">${attr(editing?.note || "")}</textarea></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn secondary" type="button" data-action="closeStockModal">Vazgeç</button>
+            <button class="btn dark" type="submit">${editing ? "Stok Kartını Güncelle" : "Stok Kartı Ekle"}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
+function stockMovementModal(editing = null) {
+  if (!state.showStockMovementModal && !editing) return "";
+  const stockItems = scopedItems("stock");
+  const selectedStock = stockItems.find(item => item.id === editing?.stockId) || stockItems[0] || {};
+  const suppliers = scopedItems("suppliers");
+  const reservations = visibleReservations().filter(item => !item.comparisonDemoReservation).slice().sort((a, b) => a.date.localeCompare(b.date));
+  return `
+    <div class="modal-backdrop" data-action="closeStockMovementModal">
+      <section class="modal-panel" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <h2>${editing ? "Stok Hareketini Düzenle" : "Yeni Stok Hareketi"}</h2>
+          <button class="icon-button" type="button" data-action="closeStockMovementModal" aria-label="Kapat">×</button>
+        </div>
+        <form id="stockMovementForm">
+          <div class="form-grid">
+            <div class="field"><label>Ürün *</label><select name="stockId" required><option value="">Ürün seçin</option>${stockItems.map(item => `<option value="${item.id}" ${editing?.stockId === item.id ? "selected" : ""}>${item.name} - mevcut ${Number(item.quantity || 0)} ${item.unit || "adet"}</option>`).join("")}</select></div>
+            <div class="field"><label>Hareket Tipi *</label><select name="direction" required><option value="in" ${(editing?.direction || "in") === "in" ? "selected" : ""}>Giriş / Satın Alma</option><option value="out" ${editing?.direction === "out" ? "selected" : ""}>Organizasyona Kullanım</option><option value="waste" ${editing?.direction === "waste" ? "selected" : ""}>Fire / Kayıp</option></select></div>
+            <div class="field"><label>Miktar *</label><input name="quantity" type="number" min="0.01" step="0.01" required value="${attr(editing?.quantity ?? 1)}"></div>
+            <div class="field"><label>Birim</label><input name="unit" value="${attr(editing?.unit || selectedStock.unit || "adet")}"></div>
+            <div class="field"><label>Tedarikçi</label><select name="supplierId"><option value="">Tedarikçi seçin</option>${suppliers.map(item => `<option value="${item.id}" ${editing?.supplierId === item.id ? "selected" : ""}>${item.name}</option>`).join("")}</select></div>
+            <div class="field"><label>Organizasyon</label><select name="reservationId"><option value="">Genel / organizasyonsuz</option>${reservations.map(item => `<option value="${item.id}" ${editing?.reservationId === item.id ? "selected" : ""}>${new Date(item.date).toLocaleDateString("tr-TR")} - ${item.couple}</option>`).join("")}</select></div>
+            <div class="field"><label>Tarih</label><input name="date" type="date" value="${attr(editing?.date || today())}"></div>
+            <div class="field"><label>Birim Alış (₺)</label><input name="unitCost" type="number" min="0" step="0.01" value="${attr(editing?.unitCost ?? selectedStock.unitCost ?? 0)}"></div>
+            <div class="field"><label>Birim Satış (₺)</label><input name="unitSalePrice" type="number" min="0" step="0.01" value="${attr(editing?.unitSalePrice ?? selectedStock.unitSalePrice ?? 0)}"></div>
+            <div class="field full"><label>Not</label><textarea name="note" placeholder="Fatura, kullanım, teslimat veya organizasyon notu...">${attr(editing?.note || "")}</textarea></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn secondary" type="button" data-action="closeStockMovementModal">Vazgeç</button>
+            <button class="btn dark" type="submit">${editing ? "Hareketi Güncelle" : "Hareket Ekle"}</button>
+          </div>
+        </form>
+      </section>
+    </div>
   `;
 }
 
@@ -3573,6 +3715,73 @@ function bindForms() {
     if (["quantity", "unitCost", "unitSalePrice"].includes(event.target.name)) updateSupplierTransactionTotals();
   });
 
+  document.querySelector("#stockForm")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.target));
+    const stockItem = {
+      name: data.name,
+      category: data.category,
+      supplierId: data.supplierId || "",
+      quantity: Number(data.quantity || 0),
+      minimum: Number(data.minimum || 0),
+      unit: data.unit || "adet",
+      location: data.location,
+      unitCost: Number(data.unitCost || 0),
+      unitSalePrice: Number(data.unitSalePrice || 0),
+      note: data.note
+    };
+    if (state.editingStockId) {
+      state.stock = state.stock.map(item => item.id === state.editingStockId ? { ...item, ...stockItem } : item);
+      state.editingStockId = null;
+      state.showStockModal = false;
+      saveState();
+      render();
+      showToast("Stok kartı güncellendi");
+      return;
+    }
+    state.stock = [{ id: makeId(), tenantId: currentTenant()?.id, ...stockItem }, ...state.stock];
+    state.showStockModal = false;
+    saveState();
+    render();
+    showToast("Stok kartı eklendi");
+  });
+
+  document.querySelector("#stockMovementForm")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.target));
+    const stock = state.stock.find(item => item.id === data.stockId);
+    const movement = {
+      stockId: data.stockId,
+      direction: data.direction,
+      quantity: Number(data.quantity || 0),
+      unit: data.unit || stock?.unit || "adet",
+      supplierId: data.supplierId || stock?.supplierId || "",
+      reservationId: data.reservationId || "",
+      date: data.date || today(),
+      unitCost: Number(data.unitCost || stock?.unitCost || 0),
+      unitSalePrice: Number(data.unitSalePrice || stock?.unitSalePrice || 0),
+      note: data.note
+    };
+    if (state.editingStockMovementId) {
+      const old = state.stockMovements.find(item => item.id === state.editingStockMovementId);
+      if (old) applyStockQuantity(old.stockId, -stockMovementDelta(old));
+      applyStockQuantity(movement.stockId, stockMovementDelta(movement));
+      state.stockMovements = state.stockMovements.map(item => item.id === state.editingStockMovementId ? { ...item, ...movement } : item);
+      state.editingStockMovementId = null;
+      state.showStockMovementModal = false;
+      saveState();
+      render();
+      showToast("Stok hareketi güncellendi");
+      return;
+    }
+    applyStockQuantity(movement.stockId, stockMovementDelta(movement));
+    state.stockMovements = [{ id: makeId(), tenantId: currentTenant()?.id, ...movement }, ...state.stockMovements];
+    state.showStockMovementModal = false;
+    saveState();
+    render();
+    showToast("Stok hareketi işlendi");
+  });
+
   document.querySelector("#staffAssignmentForm")?.addEventListener("submit", event => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.target));
@@ -3778,6 +3987,30 @@ function bindForms() {
 
   document.querySelector("#cashReportEnd")?.addEventListener("change", event => {
     state.cashReportEnd = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#stockReportStock")?.addEventListener("change", event => {
+    state.stockReportStockId = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#stockReportReservation")?.addEventListener("change", event => {
+    state.stockReportReservationId = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#stockReportStart")?.addEventListener("change", event => {
+    state.stockReportStart = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#stockReportEnd")?.addEventListener("change", event => {
+    state.stockReportEnd = event.target.value;
     saveState();
     render();
   });
@@ -4131,6 +4364,89 @@ document.addEventListener("click", event => {
     saveState();
     render();
     showToast("Kasa hareketi silindi");
+    return;
+  }
+  if (action === "newStock") {
+    state.editingStockId = null;
+    state.showStockModal = true;
+    saveState();
+    render();
+    document.querySelector("#stockForm input[name='name']")?.focus();
+    return;
+  }
+  if (action === "editStock") {
+    state.editingStockId = actionEl?.dataset.id || null;
+    state.showStockModal = true;
+    saveState();
+    render();
+    document.querySelector("#stockForm input[name='name']")?.focus();
+    return;
+  }
+  if (action === "closeStockModal") {
+    if (actionEl?.classList.contains("modal-backdrop") && event.target.closest(".modal-panel")) return;
+    state.editingStockId = null;
+    state.showStockModal = false;
+    saveState();
+    render();
+    return;
+  }
+  if (action === "deleteStock") {
+    state.pendingStockDeleteId = actionEl?.dataset.id || null;
+    saveState();
+    render();
+    showToast("Silmek için tekrar onayla");
+    return;
+  }
+  if (action === "cancelStockDelete") {
+    state.pendingStockDeleteId = null;
+    saveState();
+    render();
+    return;
+  }
+  if (action === "confirmDeleteStock") {
+    const id = actionEl?.dataset.id;
+    state.stock = state.stock.filter(item => item.id !== id);
+    state.stockMovements = state.stockMovements.filter(item => item.stockId !== id);
+    if (state.editingStockId === id) state.editingStockId = null;
+    state.pendingStockDeleteId = null;
+    saveState();
+    render();
+    showToast("Stok kartı silindi");
+    return;
+  }
+  if (action === "newStockMovement") {
+    state.editingStockMovementId = null;
+    state.showStockMovementModal = true;
+    saveState();
+    render();
+    document.querySelector("#stockMovementForm select[name='stockId']")?.focus();
+    return;
+  }
+  if (action === "editStockMovement") {
+    state.editingStockMovementId = actionEl?.dataset.id || null;
+    state.showStockMovementModal = true;
+    saveState();
+    render();
+    document.querySelector("#stockMovementForm input[name='quantity']")?.focus();
+    return;
+  }
+  if (action === "closeStockMovementModal") {
+    if (actionEl?.classList.contains("modal-backdrop") && event.target.closest(".modal-panel")) return;
+    state.editingStockMovementId = null;
+    state.showStockMovementModal = false;
+    saveState();
+    render();
+    return;
+  }
+  if (action === "deleteStockMovement") {
+    const id = actionEl?.dataset.id;
+    const old = state.stockMovements.find(item => item.id === id);
+    if (old) applyStockQuantity(old.stockId, -stockMovementDelta(old));
+    state.stockMovements = state.stockMovements.filter(item => item.id !== id);
+    if (state.editingStockMovementId === id) state.editingStockMovementId = null;
+    saveState();
+    render();
+    showToast("Stok hareketi silindi");
     return;
   }
   if (action === "newStaffAssignment") {

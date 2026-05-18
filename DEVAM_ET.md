@@ -205,6 +205,18 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - Kasa ekraninda organizasyon, hareket tipi ve tarih araligi filtreleri bulunur.
 - Sayfanin altina sabit kasa bari eklendi: kasa bakiyesi, bugun giris ve bugun cikis bilgisi her ekranda gorunur.
 
+## Stok Takibi Notu
+
+- `Stok Takibi` ekrani son tedarikci/cari mantigina uygun sekilde yeniden duzenlendi.
+- Ekranda artik `+ Yeni Stok Karti` ve `+ Stok Hareketi` butonlari popup acar.
+- Stok kartinda urun adi, kategori, tedarikci, mevcut miktar, minimum stok, birim, konum, birim alis, birim satis ve not alanlari bulunur.
+- Stok hareketinde giris/satin alma, organizasyona kullanim ve fire/kayip hareketleri islenir.
+- Hareketler tedarikciye ve organizasyona baglanabilir; boylece hangi urunun hangi organizasyonda kullanildigi izlenir.
+- Stok hareketi girisi mevcut stogu artirir; organizasyona kullanim ve fire hareketleri mevcut stogu dusurur.
+- Stok kartlari duzenlenebilir/silinebilir; stok hareketleri de duzenlenebilir/silinebilir.
+- Stok hareket raporunda urun ve organizasyon filtreleri ile tarih araligi bulunur.
+- Stok ozetinde toplam urun, dusuk stok, stok maliyeti ve tahmini satis degeri gosterilir.
+
 ## Tedarikci Cari Notu
 
 - `Tedarikci Cari` ekranindaki `Genel Ozet`, `Tum Hareketler` ve `Detayli Rapor` sekmeleri calisir hale getirildi.
