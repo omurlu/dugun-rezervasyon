@@ -134,8 +134,13 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - Personel ekleme popup'indaki Atama/Etkinlik Sayisi alani kaldirildi; gorev sayisi gorevlendirme kayitlarindan otomatik hesaplanir.
 - Personel ekraninin ustundeki Toplam Personel, Gorev Kaydi ve Kalan Personel Alacagi kutulari kaldirildi; detayli ozet artik Personel Hareket Raporu icinde tutulur.
 - Personel kimlik kartlari sayfanin en altinda `Personeller` basligi altinda sade kartlar olarak gosterilir.
-- Gorevlendirme ve yevmiye kartlari raporun altinda `Gorev ve Yevmiye Hareketleri` basligi altinda listelenir.
 - Gun sonu veya hafta sonu odemeleri icin personel hareket raporu, secilen personelin toplam yevmiyesini, odenenini ve kalan alacagini hizli gormek icin ana kontrol alani olarak kurgulandi.
+- Personel Hareket Raporu'na organizasyon secimi eklendi; mekan sahibi yaklasan bir etkinligi secip o etkinlikte gorevli personeli, telefonlarini, yevmiye/odeme durumlarini tek tabloda gorebilir.
+- Rapor basliginin yanindaki ekstra gorevlendirme butonu kaldirildi; yeni gorevlendirme ana sayfa basligindaki butondan acilir.
+- Ayrica `Gorev ve Yevmiye Hareketleri` kart bolumu kaldirildi; ayni hareketlerin duzenle/sil islemleri artik Personel Hareket Raporu tablosunda yapilir.
+- Personel Hareket Raporu tablosunun en sagina net `Odeme Isle` butonu eklendi; personele o gorev icin odeme yapildiginda bu butondan gorev acilip `Odenen` tutari islenir.
+- Personel kartlarina `Guncelle` akisi eklendi; karta basinca personelin katildigi etkinlikler kart icinde listelenir ve her etkinligin yanindaki `Odeme Isle` ile o goreve ait odeme islenir.
+- Odeme islemi daha anlasilir olsun diye personel hareket tablosunda ve personel karti etkinlik listesinde ilgili gorev yanindaki buton `Odeme Isle` olarak adlandirildi.
 
 ## GitHub baglantisi
 

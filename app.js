@@ -2087,10 +2087,12 @@ function renderStock() {
 
 function filteredStaffAssignments() {
   const staffId = state.staffReportStaffId || "";
+  const reservationId = state.staffReportReservationId || "";
   const start = state.staffReportStart || `${state.year}-01-01`;
   const end = state.staffReportEnd || `${state.year}-12-31`;
   return scopedItems("staffAssignments")
     .filter(item => !staffId || item.staffId === staffId)
+    .filter(item => !reservationId || item.reservationId === reservationId)
     .filter(item => (!start || item.date >= start) && (!end || item.date <= end))
     .slice()
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -2216,44 +2218,83 @@ function staffAssignmentCard(assignment) {
   `;
 }
 
+function staffCardMovements(staffId) {
+  const assignments = scopedItems("staffAssignments")
+    .filter(item => item.staffId === staffId)
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (!assignments.length) {
+    return `<div class="person-movements">${empty("Bu personele ait görev yok", "İlk görev kaydı için + Görevlendirme butonunu kullanabilirsiniz.")}</div>`;
+  }
+  return `
+    <div class="person-movements">
+      <h3>Katıldığı Etkinlikler</h3>
+      ${assignments.map(assignment => {
+        const reservation = state.reservations.find(item => item.id === assignment.reservationId);
+        const remaining = Number(assignment.dailyWage || 0) - Number(assignment.paid || 0);
+        return `
+          <article class="person-movement-row">
+            <div>
+              <strong>${reservation?.couple || "Rezervasyon bulunamadı"}</strong>
+              <span>${new Date(assignment.date).toLocaleDateString("tr-TR")} · ${assignment.role || "Görev"} · ${reservation?.hallName || ""}</span>
+            </div>
+            <div class="person-movement-money">
+              <span>Yevmiye: <strong>${money(assignment.dailyWage)}</strong></span>
+              <span>Ödenen: <strong class="profit">${money(assignment.paid)}</strong></span>
+              <span>Kalan: <strong class="${remaining > 0 ? "danger-text" : "profit"}">${money(remaining)}</strong></span>
+            </div>
+            <button class="table-action-btn pay" type="button" data-action="editStaffAssignment" data-id="${assignment.id}">Ödeme İşle</button>
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
 function staffMovementReport(assignments) {
   const staff = scopedItems("staff");
+  const reservations = visibleReservations()
+    .filter(item => !item.comparisonDemoReservation)
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
   const selectedStaff = state.staffReportStaffId ? state.staff.find(item => item.id === state.staffReportStaffId) : null;
+  const selectedReservation = state.staffReportReservationId ? state.reservations.find(item => item.id === state.staffReportReservationId) : null;
   const totals = staffReportTotals(assignments);
   const remaining = totals.total - totals.paid;
   return `
     <section class="panel staff-report-panel">
-      <div class="section-head">
-        <h2>Personel Hareket Raporu</h2>
-        <button class="btn secondary" type="button" data-action="newStaffAssignment">+ Görevlendirme</button>
-      </div>
+      <h2>Personel Hareket Raporu</h2>
       <div class="filters staff-report-filters">
         <div class="field"><label>Personel</label><select id="staffReportStaff"><option value="">Tüm personel</option>${staff.map(item => `<option value="${item.id}" ${state.staffReportStaffId === item.id ? "selected" : ""}>${item.name} - ${item.role}</option>`).join("")}</select></div>
+        <div class="field"><label>Organizasyon</label><select id="staffReportReservation"><option value="">Tüm organizasyonlar</option>${reservations.map(item => `<option value="${item.id}" ${state.staffReportReservationId === item.id ? "selected" : ""}>${new Date(item.date).toLocaleDateString("tr-TR")} - ${item.couple}</option>`).join("")}</select></div>
         <div class="field"><label>Başlangıç</label><input id="staffReportStart" type="date" value="${state.staffReportStart || `${state.year}-01-01`}"></div>
         <div class="field"><label>Bitiş</label><input id="staffReportEnd" type="date" value="${state.staffReportEnd || `${state.year}-12-31`}"></div>
       </div>
       <div class="staff-report-summary">
         <article><span>Personel</span><strong>${selectedStaff ? selectedStaff.name : "Tüm personel"}</strong><small>${selectedStaff ? selectedStaff.role : "Genel hareket listesi"}</small></article>
+        <article><span>Organizasyon</span><strong>${selectedReservation ? selectedReservation.couple : "Tüm organizasyonlar"}</strong><small>${selectedReservation ? `${new Date(selectedReservation.date).toLocaleDateString("tr-TR")} · ${selectedReservation.hallName || ""}` : "Etkinlik bazlı kontrol"}</small></article>
         <article><span>Toplam Görev</span><strong>${totals.count}</strong></article>
         <article><span>Toplam Yevmiye</span><strong>${money(totals.total)}</strong></article>
         <article><span>Ödenen</span><strong class="profit">${money(totals.paid)}</strong></article>
         <article><span>Kalan Alacak</span><strong class="${remaining > 0 ? "danger-text" : "profit"}">${money(remaining)}</strong></article>
       </div>
-      ${assignments.length ? table(["Tarih", "Personel", "Görev", "Organizasyon", "Yevmiye", "Ödenen", "Kalan", "Durum"], assignments.map(assignment => {
+      ${assignments.length ? table(["Tarih", "Personel", "Telefon", "Görev", "Organizasyon", "Yevmiye", "Ödenen", "Kalan", "Durum", "Ödeme"], assignments.map(assignment => {
         const staffMember = state.staff.find(item => item.id === assignment.staffId);
         const reservation = state.reservations.find(item => item.id === assignment.reservationId);
         const rest = Number(assignment.dailyWage || 0) - Number(assignment.paid || 0);
         return [
           new Date(assignment.date).toLocaleDateString("tr-TR"),
           `<strong>${staffMember?.name || "-"}</strong>`,
+          staffMember?.phone || "-",
           assignment.role || staffMember?.role || "-",
           reservation?.couple || "-",
           money(assignment.dailyWage),
           money(assignment.paid),
           `<span class="${rest > 0 ? "danger-text" : "profit"}">${money(rest)}</span>`,
-          `<span class="badge ${assignmentStatusClass(assignment.status)}">${assignmentStatusLabel(assignment.status)}</span>`
+          `<span class="badge ${assignmentStatusClass(assignment.status)}">${assignmentStatusLabel(assignment.status)}</span>`,
+          `<div class="table-actions"><button class="table-action-btn pay" type="button" data-action="editStaffAssignment" data-id="${assignment.id}">Ödeme İşle</button><button class="table-action-btn delete" type="button" data-action="deleteStaffAssignment" data-id="${assignment.id}">Sil</button></div>`
         ];
-      })) : empty("Bu filtreye uygun personel hareketi yok", "Personel veya tarih aralığını değiştirerek tekrar deneyin.")}
+      })) : empty("Bu filtreye uygun personel hareketi yok", "Personel, organizasyon veya tarih aralığını değiştirerek tekrar deneyin.")}
     </section>
   `;
 }
@@ -2270,12 +2311,6 @@ function renderStaff() {
     ${staffModal(editing)}
     ${staffMovementReport(assignments)}
     <section class="panel">
-      <h2>Görev ve Yevmiye Hareketleri</h2>
-      <div class="assignment-grid">
-        ${assignments.map(staffAssignmentCard).join("") || empty("Henüz görevlendirme yok", "Yeni Görevlendirme ile personeli bir organizasyona bağlayabilirsiniz.")}
-      </div>
-    </section>
-    <section class="panel">
       <h2>Personeller</h2>
     <div class="staff-grid">
       ${staff.map(item => `
@@ -2291,11 +2326,13 @@ function renderStaff() {
             `;
           })()}
           <div class="row-actions">
-            <button class="small-icon" type="button" data-action="editStaff" data-id="${item.id}">✎ Düzenle</button>
+            <button class="small-icon text" type="button" data-action="toggleStaffMovements" data-id="${item.id}">${state.expandedStaffId === item.id ? "Kapat" : "Güncelle"}</button>
+            <button class="small-icon text" type="button" data-action="editStaff" data-id="${item.id}">Düzenle</button>
             ${state.pendingStaffDeleteId === item.id
-              ? `<button class="small-icon delete confirm-delete" type="button" data-action="confirmDeleteStaff" data-id="${item.id}">Silinsin mi?</button><button class="small-icon" type="button" data-action="cancelStaffDelete">Vazgeç</button>`
-              : `<button class="small-icon delete" type="button" data-action="deleteStaff" data-id="${item.id}">⌫ Sil</button>`}
+              ? `<button class="small-icon text delete confirm-delete" type="button" data-action="confirmDeleteStaff" data-id="${item.id}">Silinsin mi?</button><button class="small-icon text" type="button" data-action="cancelStaffDelete">Vazgeç</button>`
+              : `<button class="small-icon text delete" type="button" data-action="deleteStaff" data-id="${item.id}">Sil</button>`}
           </div>
+          ${state.expandedStaffId === item.id ? staffCardMovements(item.id) : ""}
         </article>
       `).join("") || empty("Personel kaydı yok", "Yeni Personel Ekle alanından ilk personeli oluşturabilirsiniz.")}
     </div>
@@ -2992,6 +3029,12 @@ function bindForms() {
     render();
   });
 
+  document.querySelector("#staffReportReservation")?.addEventListener("change", event => {
+    state.staffReportReservationId = event.target.value;
+    saveState();
+    render();
+  });
+
   document.querySelector("#staffReportStart")?.addEventListener("change", event => {
     state.staffReportStart = event.target.value;
     saveState();
@@ -3139,6 +3182,13 @@ document.addEventListener("click", event => {
     saveState();
     render();
     document.querySelector("#staffForm input[name='name']")?.focus();
+    return;
+  }
+  if (action === "toggleStaffMovements") {
+    const id = actionEl?.dataset.id || null;
+    state.expandedStaffId = state.expandedStaffId === id ? null : id;
+    saveState();
+    render();
     return;
   }
   if (action === "cancelStaffEdit") {
