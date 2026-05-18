@@ -131,6 +131,11 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - Yeni personel ekleme/duzenleme popup olarak acilir; sayfa uzerinde surekli form kalabaligi olusturmaz.
 - Personel Hareket Raporu eklendi: tum personel veya tek personel secilebilir, tarih araligi verilebilir, gorev hareketleri tablo halinde listelenir.
 - Personel hareket raporu ustunde personel adi/gorevi, toplam gorev, toplam yevmiye, odenen ve kalan alacak ozet kutulari bulunur.
+- Personel ekleme popup'indaki Atama/Etkinlik Sayisi alani kaldirildi; gorev sayisi gorevlendirme kayitlarindan otomatik hesaplanir.
+- Personel ekraninin ustundeki Toplam Personel, Gorev Kaydi ve Kalan Personel Alacagi kutulari kaldirildi; detayli ozet artik Personel Hareket Raporu icinde tutulur.
+- Personel kimlik kartlari sayfanin en altinda `Personeller` basligi altinda sade kartlar olarak gosterilir.
+- Gorevlendirme ve yevmiye kartlari raporun altinda `Gorev ve Yevmiye Hareketleri` basligi altinda listelenir.
+- Gun sonu veya hafta sonu odemeleri icin personel hareket raporu, secilen personelin toplam yevmiyesini, odenenini ve kalan alacagini hizli gormek icin ana kontrol alani olarak kurgulandi.
 
 ## GitHub baglantisi
 

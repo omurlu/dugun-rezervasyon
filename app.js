@@ -2130,7 +2130,6 @@ function staffModal(editing = null) {
             <div class="field"><label>Görev / Uzmanlık</label><input name="role" required value="${attr(editing?.role || "")}" placeholder="Piyanist, garson, servis şefi"></div>
             <div class="field"><label>Telefon</label><input name="phone" value="${attr(editing?.phone || "")}" placeholder="05xx xxx xx xx"></div>
             <div class="field"><label>E-posta</label><input name="email" type="email" value="${attr(editing?.email || "")}" placeholder="ornek@mail.com"></div>
-            <div class="field"><label>Atama / Etkinlik Sayısı</label><input name="events" type="number" min="0" value="${Number(editing?.events || 0)}"></div>
             <div class="field"><label>Durum</label><select name="active"><option value="true" ${editing?.active !== false ? "selected" : ""}>Aktif</option><option value="false" ${editing?.active === false ? "selected" : ""}>Pasif</option></select></div>
           </div>
           <div class="form-actions">
@@ -2265,17 +2264,19 @@ function renderStaff() {
   const editingAssignment = state.editingStaffAssignmentId ? state.staffAssignments.find(item => item.id === state.editingStaffAssignmentId) : null;
   const showAssignmentForm = Boolean(state.showStaffAssignmentForm || editingAssignment);
   const assignments = filteredStaffAssignments();
-  const assignmentTotals = staffAssignmentTotals(null, scopedItems("staffAssignments"));
-  const active = staff.filter(item => item.active).length;
   root.innerHTML = `
     ${pageHeader("Personel Yönetimi", `<div class="row-actions"><button class="btn secondary" type="button" data-action="newStaffAssignment">+ Görevlendirme</button><button class="btn" type="button" data-action="newStaff">+ Yeni Personel Ekle</button></div>`)}
-    <div class="stats-grid three-cols">
-      ${statCard("Toplam Personel", staff.length, "♙", "violet")}
-      ${statCard("Görev Kaydı", assignmentTotals.count, "□", "blue")}
-      ${statCard("Kalan Personel Alacağı", money(assignmentTotals.total - assignmentTotals.paid), "₺", assignmentTotals.total - assignmentTotals.paid > 0 ? "orange" : "green", `${active} aktif personel`)}
-    </div>
     ${showAssignmentForm ? renderStaffAssignmentForm(editingAssignment) : ""}
     ${staffModal(editing)}
+    ${staffMovementReport(assignments)}
+    <section class="panel">
+      <h2>Görev ve Yevmiye Hareketleri</h2>
+      <div class="assignment-grid">
+        ${assignments.map(staffAssignmentCard).join("") || empty("Henüz görevlendirme yok", "Yeni Görevlendirme ile personeli bir organizasyona bağlayabilirsiniz.")}
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Personeller</h2>
     <div class="staff-grid">
       ${staff.map(item => `
         <article class="person-card">
@@ -2286,7 +2287,7 @@ function renderStaff() {
           <span class="status ${item.active ? "ok" : ""}">${item.active ? "Aktif" : "Pasif"}</span>
           <h2>${item.name}</h2>
           <p>${item.role}</p>
-          <div class="person-meta"><span>☎ ${item.phone}</span><span>✉ ${item.email}</span><span>□ ${totals.count} görev</span><span>Yevmiye: ${money(totals.total)}</span><span>Ödenen: ${money(totals.paid)}</span><span>Kalan: <strong class="${remaining > 0 ? "danger-text" : "profit"}">${money(remaining)}</strong></span></div>
+          <div class="person-meta"><span>☎ ${item.phone || "-"}</span><span>□ ${totals.count} görev</span><span>Genel yevmiye: <strong>${money(totals.total)}</strong></span><span>Ödenen: <strong class="profit">${money(totals.paid)}</strong></span><span>Kalan: <strong class="${remaining > 0 ? "danger-text" : "profit"}">${money(remaining)}</strong></span></div>
             `;
           })()}
           <div class="row-actions">
@@ -2298,13 +2299,7 @@ function renderStaff() {
         </article>
       `).join("") || empty("Personel kaydı yok", "Yeni Personel Ekle alanından ilk personeli oluşturabilirsiniz.")}
     </div>
-    <section class="panel">
-      <h2>Görev ve Yevmiye Kartları</h2>
-      <div class="assignment-grid">
-        ${assignments.map(staffAssignmentCard).join("") || empty("Henüz görevlendirme yok", "Yeni Görevlendirme ile personeli bir organizasyona bağlayabilirsiniz.")}
-      </div>
     </section>
-    ${staffMovementReport(assignments)}
   `;
 }
 
@@ -2842,7 +2837,6 @@ function bindForms() {
       role: data.role,
       phone: data.phone,
       email: data.email,
-      events: Number(data.events || 0),
       active: data.active !== "false"
     };
     if (state.editingStaffId) {
