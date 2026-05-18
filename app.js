@@ -230,6 +230,8 @@ function normalizeState() {
   ensureTenantDemoStaff();
   ensureTenantDemoStaffAssignments();
   ensureTenantDemoSupplierTransactions();
+  ensureTenantDemoStockConsumables();
+  ensureMenuRecipeDefaults();
   markTenantDemoReservations();
   ensureLastYearComparisonReservations();
   ensureSmsSystem();
@@ -755,6 +757,77 @@ function ensureTenantDemoSupplierTransactions() {
         paid,
         status: paid >= amount ? "paid" : paid > 0 ? "partial" : "unpaid"
       });
+    });
+  });
+}
+
+function ensureTenantDemoStockConsumables() {
+  const samples = [
+    { name: "Kola 1 Litre", category: "İçecek", quantity: 180, minimum: 40, unit: "adet", location: "Mutfak Deposu", unitCost: 28, unitSalePrice: 55 },
+    { name: "Kuru Pasta", category: "İkram", quantity: 65, minimum: 15, unit: "kg", location: "Mutfak Deposu", unitCost: 140, unitSalePrice: 260 },
+    { name: "Poğaça", category: "İkram", quantity: 240, minimum: 60, unit: "adet", location: "Mutfak Deposu", unitCost: 9, unitSalePrice: 18 },
+    { name: "Ordövr Sarf Malzemesi", category: "Mutfak", quantity: 520, minimum: 100, unit: "porsiyon", location: "Soğuk Oda", unitCost: 55, unitSalePrice: 95 }
+  ];
+  state.tenants.forEach(tenant => {
+    const suppliers = state.suppliers.filter(item => item.tenantId === tenant.id);
+    samples.forEach(sample => {
+      const exists = state.stock.some(item => item.tenantId === tenant.id && sameText(item.name, sample.name));
+      if (exists) return;
+      const supplier = suppliers.find(item => sameText(item.category, sample.category) || ["Yemek", "İçecek"].some(category => sameText(item.category, category)));
+      state.stock.push({
+        id: makeId(),
+        tenantId: tenant.id,
+        supplierId: supplier?.id || "",
+        note: "Demo sarf/ikram stok kartı",
+        ...sample
+      });
+    });
+  });
+}
+
+function ensureMenuRecipeDefaults() {
+  state.tenants.forEach(tenant => {
+    const tenantStock = state.stock.filter(item => item.tenantId === tenant.id);
+    const cola = tenantStock.find(item => sameText(item.name, "Kola 1 Litre"));
+    const ordovr = tenantStock.find(item => sameText(item.name, "Ordövr Sarf Malzemesi"));
+    const pogaca = tenantStock.find(item => sameText(item.name, "Poğaça"));
+    const kuruPasta = tenantStock.find(item => sameText(item.name, "Kuru Pasta"));
+    const menuCategory = state.menuCategories.find(item => item.tenantId === tenant.id && ["mevlit_ikramlari", "baslangiclar", "mezeler"].includes(item.value))?.value
+      || state.menuCategories.find(item => item.tenantId === tenant.id)?.value
+      || "baslangiclar";
+    [
+      { name: "Kuru Pasta İkramı", stock: kuruPasta, qty: 0.08, priceMultiplier: 1.9 },
+      { name: "Poğaça İkramı", stock: pogaca, qty: 1.2, priceMultiplier: 2 }
+    ].forEach(sample => {
+      if (!sample.stock) return;
+      const exists = state.menus.some(item => item.tenantId === tenant.id && sameText(item.name, sample.name));
+      if (exists) return;
+      state.menus.push({
+        id: makeId(),
+        tenantId: tenant.id,
+        name: sample.name,
+        category: menuCategory,
+        productionType: "stock",
+        supplierId: sample.stock.supplierId || "",
+        cost: Math.round(Number(sample.stock.unitCost || 0) * sample.qty),
+        price: Math.round(Number(sample.stock.unitSalePrice || sample.stock.unitCost || 0) * sample.qty * sample.priceMultiplier),
+        stockItemId: sample.stock.id,
+        stockQtyPerGuest: sample.qty,
+        stockMode: "per_guest"
+      });
+    });
+    state.menus = state.menus.map(menu => {
+      if (menu.tenantId !== tenant.id || menu.stockItemId) return menu;
+      if (sameText(menu.name, "Limitsiz Meşrubat") && cola) {
+        return { ...menu, productionType: "stock", stockItemId: cola.id, stockQtyPerGuest: 0.35, stockMode: "unlimited", supplierId: cola.supplierId || menu.supplierId || "" };
+      }
+      if (sameText(menu.name, "Ordövr Tabağı") && ordovr) {
+        return { ...menu, productionType: "kitchen", stockItemId: ordovr.id, stockQtyPerGuest: 1, stockMode: "per_guest", supplierId: ordovr.supplierId || menu.supplierId || "" };
+      }
+      if (sameText(menu.name, "Peynirli Sigara Böreği") && pogaca) {
+        return { ...menu, productionType: "kitchen", stockItemId: pogaca.id, stockQtyPerGuest: 1, stockMode: "per_guest", supplierId: pogaca.supplierId || menu.supplierId || "" };
+      }
+      return menu;
     });
   });
 }
@@ -1394,7 +1467,7 @@ function renderNewReservation() {
           ${menuCategories.map(category => {
             const items = menus.filter(menu => menu.category === category.value);
             if (!items.length) return "";
-            return `<div class="menu-group"><h3>${category.name}</h3><div class="choice-list">${items.map(item => checkboxPriceRow("menus", item.id, item.name, item.price, "kişi", item.cost, selectedMenuIds.includes(item.id))).join("")}</div></div>`;
+            return `<div class="menu-group"><h3>${category.name}</h3><div class="choice-list">${items.map(item => checkboxPriceRow("menus", item.id, `${item.name}${item.stockItemId ? ` · stok: ${stockName(item.stockItemId)}` : ""}`, item.price, "kişi", item.cost, selectedMenuIds.includes(item.id))).join("")}</div></div>`;
           }).join("")}
           <div class="section-total" id="menuSectionTotal">Yemek menüsü toplamı: ₺0</div>
         </section>
@@ -2366,7 +2439,9 @@ function renderStock() {
         money(Number(item.quantity || 0) * Number(item.unitCost || 0)),
         money(Number(item.quantity || 0) * Number(item.unitSalePrice || 0)),
         item.note || "-",
-        `<div class="table-actions"><button class="table-action-btn pay" type="button" data-action="editStockMovement" data-id="${item.id}">Düzenle</button><button class="table-action-btn delete" type="button" data-action="deleteStockMovement" data-id="${item.id}">Sil</button></div>`
+        item.source === "reservation-menu"
+          ? `<span class="muted">Rezervasyondan</span>`
+          : `<div class="table-actions"><button class="table-action-btn pay" type="button" data-action="editStockMovement" data-id="${item.id}">Düzenle</button><button class="table-action-btn delete" type="button" data-action="deleteStockMovement" data-id="${item.id}">Sil</button></div>`
       ])) : empty("Stok hareketi yok", "Ürün girişi, organizasyona kullanım veya fire hareketi ekleyin.")}
     </section>
     <section class="panel">
@@ -2412,6 +2487,42 @@ function stockMovementDelta(item) {
 function applyStockQuantity(stockId, delta) {
   if (!stockId || !delta) return;
   state.stock = state.stock.map(item => item.id === stockId ? { ...item, quantity: Math.max(0, Number(item.quantity || 0) + delta) } : item);
+}
+
+function removeReservationStockMovements(reservationId) {
+  const oldRows = state.stockMovements.filter(item => item.source === "reservation-menu" && item.reservationId === reservationId);
+  oldRows.forEach(item => applyStockQuantity(item.stockId, -stockMovementDelta(item)));
+  state.stockMovements = state.stockMovements.filter(item => !(item.source === "reservation-menu" && item.reservationId === reservationId));
+}
+
+function syncReservationStockMovements(reservation) {
+  if (!reservation?.id) return;
+  removeReservationStockMovements(reservation.id);
+  const guests = Number(reservation.guests || 0);
+  const rows = (reservation.menus || [])
+    .filter(item => item.stockItemId && Number(item.stockQtyPerGuest || 0) > 0)
+    .map(item => {
+      const stock = state.stock.find(row => row.id === item.stockItemId);
+      const buffer = item.stockMode === "unlimited" ? 1.2 : 1;
+      const quantity = Math.ceil(guests * Number(item.stockQtyPerGuest || 0) * buffer);
+      return {
+        id: makeId(),
+        tenantId: reservation.tenantId || currentTenant()?.id,
+        source: "reservation-menu",
+        stockId: item.stockItemId,
+        direction: "out",
+        quantity,
+        unit: stock?.unit || "adet",
+        supplierId: item.supplierId || stock?.supplierId || "",
+        reservationId: reservation.id,
+        date: reservation.date || today(),
+        unitCost: Number(stock?.unitCost || item.cost || 0),
+        unitSalePrice: Number(stock?.unitSalePrice || item.price || 0),
+        note: `${reservation.couple} için ${item.name} menü/reçete çıkışı`
+      };
+    });
+  rows.forEach(item => applyStockQuantity(item.stockId, stockMovementDelta(item)));
+  state.stockMovements = [...rows, ...state.stockMovements];
 }
 
 function filteredStockMovements() {
@@ -2477,6 +2588,7 @@ function stockMovementModal(editing = null) {
           <div class="form-grid">
             <div class="field"><label>Ürün *</label><select name="stockId" required><option value="">Ürün seçin</option>${stockItems.map(item => `<option value="${item.id}" ${editing?.stockId === item.id ? "selected" : ""}>${item.name} - mevcut ${Number(item.quantity || 0)} ${item.unit || "adet"}</option>`).join("")}</select></div>
             <div class="field"><label>Hareket Tipi *</label><select name="direction" required><option value="in" ${(editing?.direction || "in") === "in" ? "selected" : ""}>Giriş / Satın Alma</option><option value="out" ${editing?.direction === "out" ? "selected" : ""}>Organizasyona Kullanım</option><option value="waste" ${editing?.direction === "waste" ? "selected" : ""}>Fire / Kayıp</option></select></div>
+            ${editing?.source === "reservation-menu" ? `<div class="field full"><div class="alert">Bu hareket rezervasyondaki menü seçiminden otomatik oluştu. Rezervasyon menüsü değişirse stok çıkışı tekrar hesaplanır.</div></div>` : ""}
             <div class="field"><label>Miktar *</label><input name="quantity" type="number" min="0.01" step="0.01" required value="${attr(editing?.quantity ?? 1)}"></div>
             <div class="field"><label>Birim</label><input name="unit" value="${attr(editing?.unit || selectedStock.unit || "adet")}"></div>
             <div class="field"><label>Tedarikçi</label><select name="supplierId"><option value="">Tedarikçi seçin</option>${suppliers.map(item => `<option value="${item.id}" ${editing?.supplierId === item.id ? "selected" : ""}>${item.name}</option>`).join("")}</select></div>
@@ -3268,9 +3380,11 @@ function renderExtras() {
 
 function renderMenus() {
   const editing = currentManagementEdit("menus");
+  const suppliers = scopedItems("suppliers");
+  const stockItems = scopedItems("stock");
   root.innerHTML = `
     ${pageTitle("☷", "Yemek Menüsü", "Menü kalemlerini kategori, maliyet ve satış fiyatıyla yönetin")}
-    <section class="panel"><h2>${editing ? "Menü Öğesini Düzenle" : "Yeni Menü Öğesi Ekle"}</h2><form id="menuForm"><div class="form-grid"><div class="field"><label>Yemek Adı *</label><input name="name" required placeholder="Örn: Dana rosto" value="${attr(editing?.name || "")}"></div><div class="field"><label>Kategori *</label><select name="category" required>${selectOptions(scopedItems("menuCategories"), editing?.category || "", "Seçin")}</select></div><div class="field"><label>Alış Fiyatı (₺)</label><input name="cost" type="number" min="0" value="${attr(editing?.cost ?? "")}"></div><div class="field"><label>Satış Fiyatı (₺)</label><input name="price" type="number" min="0" value="${attr(editing?.price ?? "")}"></div></div>${managementActions(editing ? "Menüyü Güncelle" : "+ Menüye Ekle", editing)}</form></section>
+    <section class="panel"><h2>${editing ? "Menü Öğesini Düzenle" : "Yeni Menü Öğesi Ekle"}</h2><form id="menuForm"><div class="form-grid"><div class="field"><label>Yemek Adı *</label><input name="name" required placeholder="Örn: Kuru pasta ikramı" value="${attr(editing?.name || "")}"></div><div class="field"><label>Kategori *</label><select name="category" required>${selectOptions(scopedItems("menuCategories"), editing?.category || "", "Seçin")}</select></div><div class="field"><label>Hazırlama Şekli</label><select name="productionType"><option value="kitchen" ${!editing || editing?.productionType === "kitchen" ? "selected" : ""}>Mekan mutfağı / aşçı</option><option value="supplier" ${editing?.productionType === "supplier" ? "selected" : ""}>Dışarıdan hazır alım</option><option value="stock" ${editing?.productionType === "stock" ? "selected" : ""}>Stoktan hazır tüketim</option><option value="service" ${editing?.productionType === "service" ? "selected" : ""}>Sadece hizmet</option></select></div><div class="field"><label>Tedarikçi</label><select name="supplierId"><option value="">Tedarikçi seçin</option>${suppliers.map(item => `<option value="${item.id}" ${editing?.supplierId === item.id ? "selected" : ""}>${item.name}</option>`).join("")}</select></div><div class="field"><label>Alış / Maliyet (₺)</label><input name="cost" type="number" min="0" value="${attr(editing?.cost ?? "")}"></div><div class="field"><label>Satış Fiyatı (₺)</label><input name="price" type="number" min="0" value="${attr(editing?.price ?? "")}"></div><div class="field"><label>Stok Bağlantısı</label><select name="stockItemId"><option value="">Stoktan düşmesin</option>${stockItems.map(item => `<option value="${item.id}" ${editing?.stockItemId === item.id ? "selected" : ""}>${item.name} (${Number(item.quantity || 0)} ${item.unit || "adet"})</option>`).join("")}</select></div><div class="field"><label>Kişi Başı Stok Çıkışı</label><input name="stockQtyPerGuest" type="number" min="0" step="0.01" placeholder="Örn: 0.35 kola, 1 porsiyon" value="${attr(editing?.stockQtyPerGuest ?? "")}"></div><div class="field"><label>Stok Hesaplama</label><select name="stockMode"><option value="per_guest" ${!editing || editing?.stockMode === "per_guest" ? "selected" : ""}>Kişi sayısına göre</option><option value="unlimited" ${editing?.stockMode === "unlimited" ? "selected" : ""}>Sınırsız / serbest içim paylı</option><option value="fixed" ${editing?.stockMode === "fixed" ? "selected" : ""}>Sabit miktar</option></select></div></div>${managementActions(editing ? "Menüyü Güncelle" : "+ Menüye Ekle", editing)}</form></section>
     <section class="panel"><h2>Mevcut Menü</h2><div class="list">${scopedItems("menus").map(menuRow).join("") || empty("Menü öğesi eklenmedi")}</div></section>
   `;
 }
@@ -3307,7 +3421,13 @@ function extraRow(item) {
 }
 
 function menuRow(item) {
-  return `<article class="item-row"><div><div class="item-title">${item.name} <span class="tag">${categoryName(item.category)}</span></div><div class="meta"><span>Alış: ${money(item.cost)}</span><span>Satış: ${money(item.price)}</span><span class="profit">Kar: ${money(item.price - item.cost)}</span></div></div><div class="row-actions"><button class="small-icon" data-edit-menu="${item.id}">✎</button><button class="small-icon delete" data-delete-menu="${item.id}">⌫</button></div></article>`;
+  const productionLabels = {
+    kitchen: "Mekan mutfağı",
+    supplier: "Dışarıdan alım",
+    stock: "Stoktan tüketim",
+    service: "Hizmet"
+  };
+  return `<article class="item-row"><div><div class="item-title">${item.name} <span class="tag">${categoryName(item.category)}</span></div><div class="meta"><span>${productionLabels[item.productionType] || "Mekan mutfağı"}</span><span>Alış: ${money(item.cost)}</span><span>Satış: ${money(item.price)}</span><span class="profit">Kar: ${money(item.price - item.cost)}</span>${item.supplierId ? `<span>${supplierName(item.supplierId)}</span>` : ""}${item.stockItemId ? `<span>Stok: ${stockName(item.stockItemId)} · ${Number(item.stockQtyPerGuest || 0)} ${stockUnit(item.stockItemId)}/kişi</span>` : ""}</div></div><div class="row-actions"><button class="small-icon" data-edit-menu="${item.id}">✎</button><button class="small-icon delete" data-delete-menu="${item.id}">⌫</button></div></article>`;
 }
 
 function statCard(label, value, icon, color = "blue", hint = "") {
@@ -3426,7 +3546,11 @@ function selectedCatalogLines(form, field, catalogName) {
       name: item?.name || input.dataset.label || input.value,
       price: Number(input.dataset.price || item?.price || 0),
       cost: Number(input.dataset.cost || item?.cost || 0),
-      supplierId: item?.supplierId || ""
+      supplierId: item?.supplierId || "",
+      productionType: item?.productionType || "",
+      stockItemId: item?.stockItemId || "",
+      stockQtyPerGuest: Number(item?.stockQtyPerGuest || 0),
+      stockMode: item?.stockMode || "per_guest"
     };
   });
 }
@@ -3564,7 +3688,17 @@ function bindForms() {
     const data = Object.fromEntries(new FormData(event.target));
     saveManagedItem(
       "menus",
-      { name: data.name, category: data.category, cost: Number(data.cost || 0), price: Number(data.price || 0) },
+      {
+        name: data.name,
+        category: data.category,
+        productionType: data.productionType || "kitchen",
+        supplierId: data.supplierId || "",
+        cost: Number(data.cost || 0),
+        price: Number(data.price || 0),
+        stockItemId: data.stockItemId || "",
+        stockQtyPerGuest: Number(data.stockQtyPerGuest || 0),
+        stockMode: data.stockMode || "per_guest"
+      },
       "Menü öğesi eklendi",
       "Menü öğesi güncellendi"
     );
@@ -3858,12 +3992,15 @@ function bindForms() {
     };
     if (state.editingReservationId) {
       state.reservations = state.reservations.map(item => item.id === state.editingReservationId ? { ...item, ...reservation } : item);
+      syncReservationStockMovements({ id: state.editingReservationId, ...reservation });
       state.editingReservationId = null;
       state.newReservationDate = null;
       saveState();
       showToast("Rezervasyon güncellendi");
     } else {
-      addItem("reservations", reservation);
+      const newReservation = { id: makeId(), ...reservation };
+      state.reservations = [newReservation, ...state.reservations];
+      syncReservationStockMovements(newReservation);
       state.newReservationDate = null;
       saveState();
       showToast("Rezervasyon kaydedildi");
@@ -4142,6 +4279,7 @@ document.addEventListener("click", event => {
   }
   if (action === "confirmDeleteReservation") {
     const id = actionEl?.dataset.id;
+    removeReservationStockMovements(id);
     state.reservations = state.reservations.filter(item => item.id !== id);
     if (state.editingReservationId === id) state.editingReservationId = null;
     state.pendingReservationDeleteId = null;

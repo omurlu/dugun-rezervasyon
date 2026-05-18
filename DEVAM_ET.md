@@ -217,6 +217,16 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - Stok hareket raporunda urun ve organizasyon filtreleri ile tarih araligi bulunur.
 - Stok ozetinde toplam urun, dusuk stok, stok maliyeti ve tahmini satis degeri gosterilir.
 
+## Menu - Stok Recete Notu
+
+- Kuru pasta, pogaca, kola/limitsiz mesrubat gibi kalemler `Yemek Menusu` tarafinda musterinin sececegi menu olarak durur; arka tarafta `Stok Baglantisi` ile depodan dusurulur.
+- Menu tanimina `Hazirlama Sekli` eklendi: mekan mutfagi/asci, disaridan hazir alim, stoktan hazir tuketim veya sadece hizmet.
+- Menu tanimina tedarikci, stok baglantisi, kisi basi stok cikisi ve stok hesaplama sekli eklendi.
+- Rezervasyon kaydedilirken stok baglantisi olan secili menu kalemleri icin otomatik stok hareketi olusur.
+- `Sinirsiz / serbest icim` seciminde kisi basi miktara %20 pay eklenerek stok cikisi hesaplanir.
+- Rezervasyon silinirse veya duzenlenirse, o rezervasyondan otomatik olusan stok hareketleri geri alinir ve yeniden hesaplanir.
+- Demo olarak `Kola 1 Litre`, `Kuru Pasta`, `Pogaca`, `Ordovr Sarf Malzemesi` stok kartlari ve bunlara bagli menu ornekleri eklendi.
+
 ## Tedarikci Cari Notu
 
 - `Tedarikci Cari` ekranindaki `Genel Ozet`, `Tum Hareketler` ve `Detayli Rapor` sekmeleri calisir hale getirildi.
