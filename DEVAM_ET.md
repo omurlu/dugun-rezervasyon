@@ -143,6 +143,14 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - Odeme islemi daha anlasilir olsun diye Personel Hareket Raporu tablosunda ilgili gorev yanindaki buton `Odeme Isle` olarak adlandirildi.
 - Personel Hareket Raporu'ndaki Personel, Organizasyon, Toplam Gorev, Toplam Yevmiye, Odenen ve Kalan Alacak ozet kutulari pastel renklerle ayrildi.
 
+## Gorsel Tasarim Notu
+
+- Tum proje icin modern panel/tema katmani eklendi.
+- Genel font ailesi Roboto/Segoe UI tabanli sade bir yapiya cekildi.
+- Panel, kart, tablo, buton, form ve ozet kutularinda daha modern golge, bosluk, kenarlik ve hover davranisi kullanildi.
+- Rapor, SMS, personel ve genel ozet kartlari pastel tonlarla birbirinden ayrildi.
+- Tema islevlere dokunmadan CSS seviyesinde uygulandi; veri kaydi ve ekran davranislari ayni kalir.
+
 ## GitHub baglantisi
 
 GitHub deposu olarak su adres not edildi:
