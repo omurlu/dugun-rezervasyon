@@ -96,6 +96,7 @@ const seed = {
     { id: makeId(), name: "DJ Cem Müzik", category: "Müzik", phone: "0535 444 7788", balance: -12000 },
     { id: makeId(), name: "Video Prodüksiyonu", category: "Video", phone: "0536 555 8899", balance: -10000 }
   ],
+  supplierTransactions: [],
   specialDays: [
     { date: "2026-01-01", title: "Yılbaşı" },
     { date: "2026-03-20", title: "Ramazan Bayramı Arifesi" },
@@ -192,7 +193,7 @@ const toast = document.querySelector("#toast");
 const sidebar = document.querySelector(".sidebar");
 const accountPill = document.querySelector("#accountPill");
 const smsCreditPill = document.querySelector("#smsCreditPill");
-const tenantScopedCollections = ["organizationTypes", "halls", "packages", "extras", "menuCategories", "menus", "reservations", "smsTemplates", "stock", "staff", "staffAssignments", "suppliers"];
+const tenantScopedCollections = ["organizationTypes", "halls", "packages", "extras", "menuCategories", "menus", "reservations", "smsTemplates", "stock", "staff", "staffAssignments", "suppliers", "supplierTransactions"];
 normalizeState();
 
 function loadState() {
@@ -218,11 +219,13 @@ function normalizeState() {
   if (!Array.isArray(state.specialDays)) state.specialDays = structuredClone(seed.specialDays);
   if (!Array.isArray(state.reservations)) state.reservations = [];
   if (!Array.isArray(state.staffAssignments)) state.staffAssignments = [];
+  if (!Array.isArray(state.supplierTransactions)) state.supplierTransactions = [];
   ensureDemoData();
   assignTenantIds();
   ensureTenantDemoReservations();
   ensureTenantDemoStaff();
   ensureTenantDemoStaffAssignments();
+  ensureTenantDemoSupplierTransactions();
   markTenantDemoReservations();
   ensureLastYearComparisonReservations();
   ensureSmsSystem();
@@ -709,6 +712,44 @@ function ensureTenantDemoStaffAssignments() {
         paid,
         status: paid >= dailyWage ? "paid" : paid > 0 ? "partial" : "unpaid",
         note: `${reservation.couple} organizasyonu için görev`
+      });
+    });
+  });
+}
+
+function ensureTenantDemoSupplierTransactions() {
+  const products = {
+    "Çiçek": ["Gelin yolu çiçek dekoru", "Masa üstü aranjman", "Nikah tagı çiçekleri"],
+    "Yemek": ["Ana yemek servisi", "Meze ve ara sıcak", "Personel yemeği"],
+    "Fotoğraf": ["Fotoğraf çekimi", "Albüm baskı", "Dış çekim"],
+    "Müzik": ["DJ performansı", "Canlı müzik ekibi", "Ses sistemi kurulumu"],
+    "Video": ["Video çekimi", "Drone çekimi", "Klip montaj"]
+  };
+  state.tenants.forEach(tenant => {
+    const suppliers = state.suppliers.filter(item => item.tenantId === tenant.id);
+    const reservations = state.reservations
+      .filter(item => item.tenantId === tenant.id && !item.comparisonDemoReservation)
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 5);
+    if (!suppliers.length || !reservations.length) return;
+    if (state.supplierTransactions.some(item => item.tenantId === tenant.id)) return;
+    suppliers.slice(0, 5).forEach((supplier, index) => {
+      const reservation = reservations[index % reservations.length];
+      const categoryProducts = products[supplier.category] || [supplier.category || "Hizmet"];
+      const amount = [14500, 32000, 18000, 28000, 22000][index % 5];
+      const paid = [7000, 12000, 18000, 10000, 0][index % 5];
+      state.supplierTransactions.push({
+        id: makeId(),
+        tenantId: tenant.id,
+        supplierId: supplier.id,
+        reservationId: reservation.id,
+        date: reservation.date,
+        product: categoryProducts[index % categoryProducts.length],
+        description: `${reservation.couple} için ${supplier.category || "tedarik"} hizmeti`,
+        amount,
+        paid,
+        status: paid >= amount ? "paid" : paid > 0 ? "partial" : "unpaid"
       });
     });
   });
@@ -1970,6 +2011,71 @@ function smsScheduleRows() {
     .slice(0, 12);
 }
 
+function smsQuotaStatus(tenant = currentTenant()) {
+  const settings = state.smsSettings || {};
+  const poolRemaining = Math.max(0, Number(settings.credit || 0) - Number(settings.used || 0));
+  const quota = state.tenantSmsQuotas?.[tenant?.id] || { quota: settings.defaultTenantQuota || 0, used: 0 };
+  const tenantRemaining = Math.max(0, Number(quota.quota || 0) - Number(quota.used || 0));
+  return { poolRemaining, quota, tenantRemaining };
+}
+
+function plannedSmsKey(templateId, reservationId, sendDate) {
+  return [templateId, reservationId, sendDate].join("|");
+}
+
+function hasSmsBeenSent(templateId, reservationId, sendDate) {
+  const key = plannedSmsKey(templateId, reservationId, sendDate);
+  return state.smsHistory.some(item => item.plannedKey === key && item.status !== "Başarısız");
+}
+
+function sendPlannedSms(templateId, reservationId, sendDate) {
+  const tenant = currentTenant();
+  const template = state.smsTemplates.find(item => item.id === templateId);
+  const reservation = state.reservations.find(item => item.id === reservationId);
+  if (!tenant || !template || !reservation) {
+    showToast("SMS kaydı bulunamadı");
+    return;
+  }
+
+  const { poolRemaining, quota, tenantRemaining } = smsQuotaStatus(tenant);
+  if (poolRemaining < 1) {
+    showToast("Ana SMS havuzunda kredi kalmadı");
+    return;
+  }
+  if (tenantRemaining < 1) {
+    showToast("Bu mekanın SMS kotası doldu");
+    return;
+  }
+
+  const key = plannedSmsKey(templateId, reservationId, sendDate);
+  if (hasSmsBeenSent(templateId, reservationId, sendDate)) {
+    showToast("Bu planlanan SMS daha önce gönderilmiş");
+    return;
+  }
+
+  state.smsSettings.used = Number(state.smsSettings.used || 0) + 1;
+  state.tenantSmsQuotas[tenant.id] = {
+    ...quota,
+    used: Number(quota.used || 0) + 1
+  };
+  state.smsHistory = [{
+    id: makeId(),
+    plannedKey: key,
+    date: new Date().toLocaleString("tr-TR"),
+    scheduledDate: sendDate,
+    tenantId: tenant.id,
+    tenantName: tenant.name,
+    reservationId: reservation.id,
+    phone: reservation.phone || "-",
+    template: template.title,
+    message: smsPreview(template, reservation),
+    status: state.smsSettings.providerApiUrl ? "Canlıya hazır - test kaydı" : "Simülasyon"
+  }, ...state.smsHistory];
+  saveState();
+  render();
+  showToast("SMS geçmişe işlendi ve kota düşüldü");
+}
+
 function smsTemplateForm(editing = null) {
   return `
     <section class="panel sms-template-form-panel">
@@ -1995,9 +2101,8 @@ function smsTemplateForm(editing = null) {
 
 function renderSms() {
   const settings = state.smsSettings || {};
-  const remaining = Number(settings.credit || 0) - Number(settings.used || 0);
   const tenant = currentTenant();
-  const quota = state.tenantSmsQuotas?.[tenant?.id] || { quota: settings.defaultTenantQuota || 0, used: 0 };
+  const { poolRemaining: remaining, quota, tenantRemaining } = smsQuotaStatus(tenant);
   const templates = scopedItems("smsTemplates");
   const editingTemplate = state.editingSmsTemplateId ? state.smsTemplates.find(item => item.id === state.editingSmsTemplateId) : null;
   const scheduled = smsScheduleRows();
@@ -2022,10 +2127,17 @@ function renderSms() {
     </section>
     <div class="sms-overview-grid">
       ${statCard("Ana Havuz Kalan", remaining.toLocaleString("tr-TR"), "▱", "violet")}
-      ${statCard("Bu Mekan Kotası", `${Number(quota.used || 0)} / ${Number(quota.quota || 0)}`, "□", "blue")}
+      ${statCard("Bu Mekan Kalan", `${tenantRemaining} / ${Number(quota.quota || 0)}`, "□", "blue")}
       ${statCard("Aktif Şablon", templates.filter(item => item.active !== false).length, "✉", "green")}
       ${statCard("Planlanan SMS", scheduled.length, "⌁", "orange")}
     </div>
+    <section class="panel sms-live-panel">
+      <div>
+        <h2>Gönderim Provası</h2>
+        <p>Gerçek SMS sağlayıcısı bağlanana kadar planlanan mesajları test kaydı olarak işleyebilirsin. Bu işlem ana havuzdan ve seçili mekan kotasından 1 kredi düşer, gönderim geçmişine kayıt açar.</p>
+      </div>
+      <span class="status-badge ${settings.providerApiUrl ? "ok" : "wait"}">${settings.providerApiUrl ? "API adresi hazır" : "API adresi bekleniyor"}</span>
+    </section>
     ${smsTemplateForm(editingTemplate)}
     <section class="panel">
       <h2>Otomatik SMS Şablonları</h2>
@@ -2043,17 +2155,23 @@ function renderSms() {
     </section>
     <section class="panel">
       <h2>Yaklaşan Otomatik Gönderimler</h2>
-      ${scheduled.length ? table(["Gönderim", "Şablon", "Rezervasyon", "Telefon", "Mesaj Önizleme"], scheduled.map(item => [
+      ${scheduled.length ? table(["Gönderim", "Şablon", "Rezervasyon", "Telefon", "Mesaj Önizleme", "İşlem"], scheduled.map(item => {
+        const sent = hasSmsBeenSent(item.template.id, item.reservation.id, item.sendDate);
+        return [
         new Date(item.sendDate).toLocaleDateString("tr-TR"),
         item.template.title,
         `<strong>${item.reservation.couple}</strong>`,
         item.reservation.phone || "-",
-        smsPreview(item.template, item.reservation)
-      ])) : empty("Planlanan SMS yok", "Aktif şablonlar ve rezervasyon tarihleri oluşunca burada görünür.")}
+        smsPreview(item.template, item.reservation),
+        sent
+          ? `<span class="status-badge ok">İşlendi</span>`
+          : `<button class="btn secondary mini" type="button" data-action="sendPlannedSms" data-template-id="${item.template.id}" data-reservation-id="${item.reservation.id}" data-send-date="${item.sendDate}">Test Gönder</button>`
+      ];
+      })) : empty("Planlanan SMS yok", "Aktif şablonlar ve rezervasyon tarihleri oluşunca burada görünür.")}
     </section>
     <section class="panel">
       <h2>Gönderim Geçmişi</h2>
-      ${state.smsHistory.length ? table(["Tarih", "Mekan", "Alıcı", "Şablon", "Durum"], state.smsHistory.map(item => [item.date, item.tenantName, item.phone, item.template, item.status])) : empty("Henüz gerçek gönderim yapılmadı", "Canlı SMS API bağlantısı açıldığında gönderimler burada takip edilecek.")}
+      ${state.smsHistory.length ? table(["Tarih", "Planlanan", "Mekan", "Alıcı", "Şablon", "Durum"], state.smsHistory.map(item => [item.date, item.scheduledDate ? new Date(item.scheduledDate).toLocaleDateString("tr-TR") : "-", item.tenantName, item.phone, item.template, item.status])) : empty("Henüz gönderim kaydı yok", "Planlanan SMS satırlarından test gönderimi yapınca burada takip edilecek.")}
     </section>
   `;
 }
@@ -2305,20 +2423,174 @@ function renderStaff() {
   `;
 }
 
+function supplierModal(editing = null) {
+  if (!state.showSupplierModal && !editing) return "";
+  return `
+    <div class="modal-backdrop" data-action="closeSupplierModal">
+      <section class="modal-panel" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <h2>${editing ? "Tedarikçi Düzenle" : "Yeni Tedarikçi Ekle"}</h2>
+          <button class="icon-button" type="button" data-action="closeSupplierModal" aria-label="Kapat">×</button>
+        </div>
+        <form id="supplierForm">
+          <div class="form-grid">
+            <div class="field"><label>Tedarikçi Adı *</label><input name="name" required value="${attr(editing?.name || "")}" placeholder="Örn: Foto Stüdyo Pro"></div>
+            <div class="field"><label>Kategori *</label><input name="category" required value="${attr(editing?.category || "")}" placeholder="Çiçek, yemek, fotoğraf, müzik"></div>
+            <div class="field"><label>Telefon</label><input name="phone" value="${attr(editing?.phone || "")}" placeholder="05xx xxx xx xx"></div>
+            <div class="field"><label>Yetkili Kişi</label><input name="contactName" value="${attr(editing?.contactName || "")}" placeholder="Tedarikçi yetkilisi"></div>
+            <div class="field"><label>E-posta</label><input name="email" type="email" value="${attr(editing?.email || "")}" placeholder="ornek@mail.com"></div>
+            <div class="field full"><label>Not</label><textarea name="note" placeholder="Hizmet kapsamı, teslimat notu, özel anlaşma...">${attr(editing?.note || "")}</textarea></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn secondary" type="button" data-action="closeSupplierModal">Vazgeç</button>
+            <button class="btn dark" type="submit">${editing ? "Tedarikçiyi Güncelle" : "Tedarikçi Ekle"}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
+function supplierTransactionStatusLabel(status) {
+  return {
+    paid: "Ödendi",
+    partial: "Kısmi Ödendi",
+    unpaid: "Ödenmedi"
+  }[status] || "Kısmi Ödendi";
+}
+
+function filteredSupplierTransactions() {
+  const supplierId = state.supplierReportSupplierId || "";
+  const product = state.supplierReportProduct || "";
+  const start = state.supplierReportStart || `${state.year}-01-01`;
+  const end = state.supplierReportEnd || `${state.year}-12-31`;
+  return scopedItems("supplierTransactions")
+    .filter(item => !supplierId || item.supplierId === supplierId)
+    .filter(item => !product || sameText(item.product, product))
+    .filter(item => (!start || item.date >= start) && (!end || item.date <= end))
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function supplierTransactionTotals(transactions) {
+  return transactions.reduce((acc, item) => {
+    acc.count += 1;
+    acc.amount += Number(item.amount || 0);
+    acc.paid += Number(item.paid || 0);
+    return acc;
+  }, { count: 0, amount: 0, paid: 0 });
+}
+
+function supplierTransactionModal(editing = null) {
+  if (!state.showSupplierTransactionModal && !editing) return "";
+  const suppliers = scopedItems("suppliers");
+  const reservations = visibleReservations()
+    .filter(item => !item.comparisonDemoReservation)
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return `
+    <div class="modal-backdrop" data-action="closeSupplierTransactionModal">
+      <section class="modal-panel" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <h2>${editing ? "Tedarikçi Cari Hareketi Düzenle" : "Yeni Tedarikçi Cari Hareketi"}</h2>
+          <button class="icon-button" type="button" data-action="closeSupplierTransactionModal" aria-label="Kapat">×</button>
+        </div>
+        <form id="supplierTransactionForm">
+          <div class="form-grid">
+            <div class="field"><label>Tedarikçi *</label><select name="supplierId" required><option value="">Seçin</option>${suppliers.map(item => `<option value="${item.id}" ${editing?.supplierId === item.id ? "selected" : ""}>${item.name}</option>`).join("")}</select></div>
+            <div class="field"><label>Ürün / Hizmet *</label><input name="product" required value="${attr(editing?.product || "")}" placeholder="Çiçek dekoru, fotoğraf çekimi..."></div>
+            <div class="field"><label>Organizasyon</label><select name="reservationId"><option value="">Organizasyonsuz</option>${reservations.map(item => `<option value="${item.id}" ${editing?.reservationId === item.id ? "selected" : ""}>${new Date(item.date).toLocaleDateString("tr-TR")} - ${item.couple}</option>`).join("")}</select></div>
+            <div class="field"><label>Tarih</label><input name="date" type="date" value="${attr(editing?.date || today())}"></div>
+            <div class="field"><label>Alacak / Tutar</label><input name="amount" type="number" min="0" value="${Number(editing?.amount || 0)}"></div>
+            <div class="field"><label>Ödenen</label><input name="paid" type="number" min="0" value="${Number(editing?.paid || 0)}"></div>
+            <div class="field full"><label>Not</label><textarea name="description" placeholder="Fatura, teslimat veya ödeme notu...">${attr(editing?.description || "")}</textarea></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn secondary" type="button" data-action="closeSupplierTransactionModal">Vazgeç</button>
+            <button class="btn dark" type="submit">${editing ? "Hareketi Güncelle" : "Hareket Ekle"}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
+function supplierAccountReport(transactions) {
+  const suppliers = scopedItems("suppliers");
+  const productSource = scopedItems("supplierTransactions")
+    .filter(item => !state.supplierReportSupplierId || item.supplierId === state.supplierReportSupplierId);
+  const products = [...new Set(productSource.map(item => item.product).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr"));
+  const selectedSupplier = state.supplierReportSupplierId ? state.suppliers.find(item => item.id === state.supplierReportSupplierId) : null;
+  const validProductSelected = !state.supplierReportProduct || products.includes(state.supplierReportProduct);
+  const totals = supplierTransactionTotals(transactions);
+  const remaining = totals.amount - totals.paid;
+  return `
+    <section class="panel supplier-report-panel">
+      <h2>Tedarikçi Cari Raporu</h2>
+      <div class="filters supplier-report-filters">
+        <div class="field"><label>Tedarikçi</label><select id="supplierReportSupplier"><option value="">Tüm tedarikçiler</option>${suppliers.map(item => `<option value="${item.id}" ${state.supplierReportSupplierId === item.id ? "selected" : ""}>${item.name}</option>`).join("")}</select></div>
+        <div class="field"><label>Ürün / Hizmet</label><select id="supplierReportProduct"><option value="">${selectedSupplier ? `${selectedSupplier.name} - tüm ürünler` : "Tüm ürünler"}</option>${products.map(item => `<option value="${attr(item)}" ${state.supplierReportProduct === item ? "selected" : ""}>${item}</option>`).join("")}</select></div>
+        <div class="field"><label>Başlangıç</label><input id="supplierReportStart" type="date" value="${state.supplierReportStart || `${state.year}-01-01`}"></div>
+        <div class="field"><label>Bitiş</label><input id="supplierReportEnd" type="date" value="${state.supplierReportEnd || `${state.year}-12-31`}"></div>
+      </div>
+      <div class="staff-report-summary supplier-report-summary">
+        <article><span>Tedarikçi</span><strong>${selectedSupplier ? selectedSupplier.name : "Tüm tedarikçiler"}</strong><small>${selectedSupplier ? selectedSupplier.category : "Genel cari listesi"}</small></article>
+        <article><span>Ürün / Hizmet</span><strong>${validProductSelected ? state.supplierReportProduct || "Tüm ürünler" : "Tüm ürünler"}</strong><small>${selectedSupplier ? "Seçili tedarikçinin ürünleri" : "Kalem bazlı takip"}</small></article>
+        <article><span>Toplam İşlem</span><strong>${totals.count}</strong></article>
+        <article><span>Alacak / Tutar</span><strong>${money(totals.amount)}</strong></article>
+        <article><span>Ödenen</span><strong class="profit">${money(totals.paid)}</strong></article>
+        <article><span>Kalan Borç</span><strong class="${remaining > 0 ? "danger-text" : "profit"}">${money(remaining)}</strong></article>
+      </div>
+      ${transactions.length ? table(["Tarih", "Tedarikçi", "Ürün / Hizmet", "Organizasyon", "Alacak", "Ödenen", "Kalan", "Durum", "Ödeme"], transactions.map(item => {
+        const supplier = state.suppliers.find(row => row.id === item.supplierId);
+        const reservation = state.reservations.find(row => row.id === item.reservationId);
+        const rest = Number(item.amount || 0) - Number(item.paid || 0);
+        return [
+          new Date(item.date).toLocaleDateString("tr-TR"),
+          `<strong>${supplier?.name || "-"}</strong>`,
+          item.product || "-",
+          reservation?.couple || "-",
+          money(item.amount),
+          money(item.paid),
+          `<span class="${rest > 0 ? "danger-text" : "profit"}">${money(rest)}</span>`,
+          `<span class="badge ${assignmentStatusClass(item.status)}">${supplierTransactionStatusLabel(item.status)}</span>`,
+          `<div class="table-actions"><button class="table-action-btn pay" type="button" data-action="editSupplierTransaction" data-id="${item.id}">Ödeme İşle</button><button class="table-action-btn delete" type="button" data-action="deleteSupplierTransaction" data-id="${item.id}">Sil</button></div>`
+        ];
+      })) : empty("Bu filtreye uygun tedarikçi hareketi yok", "Tedarikçi, ürün veya tarih aralığını değiştirerek tekrar deneyin.")}
+    </section>
+  `;
+}
+
 function renderSuppliers() {
+  const suppliers = scopedItems("suppliers");
+  const editingSupplier = state.editingSupplierId ? state.suppliers.find(item => item.id === state.editingSupplierId) : null;
+  const editingTransaction = state.editingSupplierTransactionId ? state.supplierTransactions.find(item => item.id === state.editingSupplierTransactionId) : null;
+  const transactions = filteredSupplierTransactions();
   root.innerHTML = `
-    ${pageHeader("Tedarikçi Yönetimi", `<button class="btn">+ Yeni Tedarikçi Ekle</button>`)}
+    ${pageHeader("Tedarikçi Yönetimi", `<div class="row-actions"><button class="btn secondary" type="button" data-action="newSupplierTransaction">+ Cari Hareket</button><button class="btn" type="button" data-action="newSupplier">+ Yeni Tedarikçi Ekle</button></div>`)}
+    ${supplierModal(editingSupplier)}
+    ${supplierTransactionModal(editingTransaction)}
+    ${supplierAccountReport(transactions)}
+    <section class="panel">
+      <h2>Tedarikçi Tanımları</h2>
     <div class="category-grid">
-      ${state.suppliers.map(item => `
+      ${suppliers.map(item => `
         <article class="mini-card">
           <h3>${item.name}</h3>
           <span class="tag">${item.category}</span>
-          <p class="muted">☎ ${item.phone}</p>
-          <p><strong>Cari:</strong> <span class="${item.balance < 0 ? "danger-text" : "profit"}">${money(item.balance)}</span></p>
-          <div class="row-actions"><button class="small-icon">✎ Düzenle</button><button class="small-icon delete">⌫</button></div>
+          <p class="muted">☎ ${item.phone || "-"}${item.contactName ? ` · ${item.contactName}` : ""}</p>
+          ${item.email ? `<p class="muted">${item.email}</p>` : ""}
+          ${item.note ? `<p>${item.note}</p>` : ""}
+          <div class="row-actions">
+            <button class="small-icon text" type="button" data-action="editSupplier" data-id="${item.id}">Düzenle</button>
+            ${state.pendingSupplierDeleteId === item.id
+              ? `<button class="small-icon text delete" type="button" data-action="confirmDeleteSupplier" data-id="${item.id}">Silinsin mi?</button><button class="small-icon text" type="button" data-action="cancelSupplierDelete">Vazgeç</button>`
+              : `<button class="small-icon text delete" type="button" data-action="deleteSupplier" data-id="${item.id}">Sil</button>`}
+          </div>
         </article>
-      `).join("")}
+      `).join("") || empty("Tedarikçi tanımı yok", "Yeni Tedarikçi Ekle ile ilk tedarikçiyi oluşturabilirsiniz.")}
     </div>
+    </section>
   `;
 }
 
@@ -2857,6 +3129,64 @@ function bindForms() {
     showToast("Personel eklendi");
   });
 
+  document.querySelector("#supplierForm")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.target));
+    const supplier = {
+      name: data.name,
+      category: data.category,
+      phone: data.phone,
+      contactName: data.contactName,
+      email: data.email,
+      note: data.note
+    };
+    if (state.editingSupplierId) {
+      state.suppliers = state.suppliers.map(item => item.id === state.editingSupplierId ? { ...item, ...supplier } : item);
+      state.editingSupplierId = null;
+      state.showSupplierModal = false;
+      saveState();
+      render();
+      showToast("Tedarikçi güncellendi");
+      return;
+    }
+    state.suppliers = [{ id: makeId(), tenantId: currentTenant()?.id, balance: 0, ...supplier }, ...state.suppliers];
+    state.showSupplierModal = false;
+    saveState();
+    render();
+    showToast("Tedarikçi eklendi");
+  });
+
+  document.querySelector("#supplierTransactionForm")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.target));
+    const amount = Number(data.amount || 0);
+    const paid = Number(data.paid || 0);
+    const transaction = {
+      supplierId: data.supplierId,
+      reservationId: data.reservationId,
+      date: data.date || today(),
+      product: data.product,
+      description: data.description,
+      amount,
+      paid,
+      status: paid >= amount ? "paid" : paid > 0 ? "partial" : "unpaid"
+    };
+    if (state.editingSupplierTransactionId) {
+      state.supplierTransactions = state.supplierTransactions.map(item => item.id === state.editingSupplierTransactionId ? { ...item, ...transaction } : item);
+      state.editingSupplierTransactionId = null;
+      state.showSupplierTransactionModal = false;
+      saveState();
+      render();
+      showToast("Tedarikçi hareketi güncellendi");
+      return;
+    }
+    state.supplierTransactions = [{ id: makeId(), tenantId: currentTenant()?.id, ...transaction }, ...state.supplierTransactions];
+    state.showSupplierTransactionModal = false;
+    saveState();
+    render();
+    showToast("Tedarikçi hareketi eklendi");
+  });
+
   document.querySelector("#staffAssignmentForm")?.addEventListener("submit", event => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.target));
@@ -3012,6 +3342,31 @@ function bindForms() {
     render();
   });
 
+  document.querySelector("#supplierReportSupplier")?.addEventListener("change", event => {
+    state.supplierReportSupplierId = event.target.value;
+    state.supplierReportProduct = "";
+    saveState();
+    render();
+  });
+
+  document.querySelector("#supplierReportProduct")?.addEventListener("change", event => {
+    state.supplierReportProduct = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#supplierReportStart")?.addEventListener("change", event => {
+    state.supplierReportStart = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#supplierReportEnd")?.addEventListener("change", event => {
+    state.supplierReportEnd = event.target.value;
+    saveState();
+    render();
+  });
+
   updateQuote();
 }
 
@@ -3133,6 +3488,10 @@ document.addEventListener("click", event => {
     showToast("SMS şablonu silindi");
     return;
   }
+  if (action === "sendPlannedSms") {
+    sendPlannedSms(actionEl?.dataset.templateId, actionEl?.dataset.reservationId, actionEl?.dataset.sendDate);
+    return;
+  }
   if (action === "newStaff") {
     state.editingStaffId = null;
     state.showStaffModal = true;
@@ -3189,6 +3548,90 @@ document.addEventListener("click", event => {
     saveState();
     render();
     showToast("Personel silindi");
+    return;
+  }
+  if (action === "newSupplier") {
+    state.editingSupplierId = null;
+    state.showSupplierModal = true;
+    saveState();
+    render();
+    document.querySelector("#supplierForm input[name='name']")?.focus();
+    return;
+  }
+  if (action === "editSupplier") {
+    state.editingSupplierId = actionEl?.dataset.id || null;
+    state.showSupplierModal = true;
+    saveState();
+    render();
+    document.querySelector("#supplierForm input[name='name']")?.focus();
+    return;
+  }
+  if (action === "closeSupplierModal") {
+    if (actionEl?.classList.contains("modal-backdrop") && event.target.closest(".modal-panel")) return;
+    state.editingSupplierId = null;
+    state.showSupplierModal = false;
+    saveState();
+    render();
+    return;
+  }
+  if (action === "deleteSupplier") {
+    const id = actionEl?.dataset.id;
+    const supplier = state.suppliers.find(item => item.id === id);
+    if (!supplier) return;
+    state.pendingSupplierDeleteId = id;
+    saveState();
+    render();
+    showToast("Silmek için tekrar onayla");
+    return;
+  }
+  if (action === "cancelSupplierDelete") {
+    state.pendingSupplierDeleteId = null;
+    saveState();
+    render();
+    return;
+  }
+  if (action === "confirmDeleteSupplier") {
+    const id = actionEl?.dataset.id;
+    state.suppliers = state.suppliers.filter(item => item.id !== id);
+    state.supplierTransactions = state.supplierTransactions.filter(item => item.supplierId !== id);
+    if (state.editingSupplierId === id) state.editingSupplierId = null;
+    state.pendingSupplierDeleteId = null;
+    saveState();
+    render();
+    showToast("Tedarikçi silindi");
+    return;
+  }
+  if (action === "newSupplierTransaction") {
+    state.editingSupplierTransactionId = null;
+    state.showSupplierTransactionModal = true;
+    saveState();
+    render();
+    document.querySelector("#supplierTransactionForm select[name='supplierId']")?.focus();
+    return;
+  }
+  if (action === "editSupplierTransaction") {
+    state.editingSupplierTransactionId = actionEl?.dataset.id || null;
+    state.showSupplierTransactionModal = true;
+    saveState();
+    render();
+    document.querySelector("#supplierTransactionForm input[name='paid']")?.focus();
+    return;
+  }
+  if (action === "closeSupplierTransactionModal") {
+    if (actionEl?.classList.contains("modal-backdrop") && event.target.closest(".modal-panel")) return;
+    state.editingSupplierTransactionId = null;
+    state.showSupplierTransactionModal = false;
+    saveState();
+    render();
+    return;
+  }
+  if (action === "deleteSupplierTransaction") {
+    const id = actionEl?.dataset.id;
+    state.supplierTransactions = state.supplierTransactions.filter(item => item.id !== id);
+    if (state.editingSupplierTransactionId === id) state.editingSupplierTransactionId = null;
+    saveState();
+    render();
+    showToast("Tedarikçi hareketi silindi");
     return;
   }
   if (action === "newStaffAssignment") {

@@ -1492,6 +1492,52 @@ textarea {
   margin: 18px 0;
 }
 
+.sms-live-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.sms-live-panel p {
+  margin: 6px 0 0;
+  max-width: 880px;
+  color: var(--muted);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.status-badge.ok {
+  border-color: rgba(5, 150, 105, .22);
+  background: #ecfdf5;
+  color: var(--green);
+}
+
+.status-badge.wait {
+  border-color: rgba(217, 119, 6, .25);
+  background: #fffbeb;
+  color: var(--amber);
+}
+
+.btn.mini {
+  min-height: 32px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
 .tabs.three {
   grid-template-columns: repeat(3, 1fr);
 }
@@ -1768,6 +1814,11 @@ th {
 
 .staff-report-filters {
   grid-template-columns: 1fr 1.45fr .85fr .85fr;
+  margin-bottom: 18px;
+}
+
+.supplier-report-filters {
+  grid-template-columns: 1fr 1.35fr .85fr .85fr;
   margin-bottom: 18px;
 }
 
@@ -2444,7 +2495,7 @@ th {
   .report-heading { flex-direction: column; align-items: stretch; }
   .report-actions { width: 100%; }
   .report-actions .btn { flex: 1; }
-  .months-grid, .stats-grid, .executive-summary, .insight-grid, .comparison-grid, .top-earners-grid, .collection-grid, .sms-overview-grid, .staff-report-filters, .form-grid, .form-grid.thirds, .category-grid, .tenant-card, .membership-strip, .tenant-followup, .filters, .tabs, .tabs.three { grid-template-columns: 1fr; }
+  .months-grid, .stats-grid, .executive-summary, .insight-grid, .comparison-grid, .top-earners-grid, .collection-grid, .sms-overview-grid, .staff-report-filters, .supplier-report-filters, .form-grid, .form-grid.thirds, .category-grid, .tenant-card, .membership-strip, .tenant-followup, .filters, .tabs, .tabs.three { grid-template-columns: 1fr; }
   .monthly-chart { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .tenant-metrics { align-items: flex-start; text-align: left; }
   .panel { padding: 18px; }

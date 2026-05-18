@@ -117,6 +117,11 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - SMS sablonlari ekrandan eklenebilir, duzenlenebilir, pasife alinabilir veya silinebilir hale getirildi.
 - Rezervasyon tarihine gore yaklasan otomatik SMS gonderimleri listelenir.
 - Canli SMS gonderimi icin sonraki adimda secilecek saglayicinin API formatina gore gercek gonderim baglantisi eklenecek.
+- SMS bolumune gonderim provasi eklendi: yaklasan otomatik SMS satirindan `Test Gonder` ile mesaj gecmise islenir.
+- Test gonderimi ana SMS havuzundan ve secili mekan kotasindan 1 kredi dusurur.
+- Ayni planlanan SMS ikinci kez islenmez; satir `Islendi` olarak gorunur.
+- Gonderim gecmisi artik planlanan tarih, mekan, alici, sablon ve durum bilgisiyle takip edilir.
+- API adresi girildiginde panel `API adresi hazir` durumunu gosterir; gercek saglayici baglantisi icin altyapi ayrildi.
 
 ## Personel Notu
 
@@ -154,6 +159,20 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - Tema Düğün Yolu alt modulu gibi daha beyaz, sade ve kurumsal bir cizgiye cekildi.
 - Ozet kutularinda renkli zeminler kaldirildi; renk artik kutu ust cizgileri, baslik vurgulari ve ana aksiyonlarda kullanilir.
 - Basliklarda rose/altin marka vurgusu kullanildi; dashboard hissi daha premium ve sakin hale getirildi.
+
+## Tedarikci Notu
+
+- Tedarikciler bolumu sadece tedarikci tanimi icin sade hale getirildi.
+- `Yeni Tedarikci Ekle` butonu personeldeki gibi popup acacak sekilde duzenlendi.
+- Tedarikci kartlarindaki `Duzenle` butonu ayni popup icinde tedarikci detaylarini duzenler.
+- Tedarikci taniminda ad, kategori, telefon, yetkili kisi, e-posta ve not alanlari bulunur.
+- Tedarikciler ekranina Personel Hareket Raporu mantiginda `Tedarikci Cari Raporu` eklendi.
+- Rapor alaninda tedarikci, urun/hizmet ve tarih araligi filtreleri bulunur; `Tumu` secilince tum tedarikcilerin hesaplari listelenir.
+- Tedarikci secilince urun/hizmet filtresi sadece secili tedarikcinin hareketlerinde gecen urunleri gosterir; tedarikci degisince eski urun secimi sifirlanir.
+- Cari tabloda alacak/tutar, odenen, kalan borc ve durum gosterilir.
+- Her cari hareket satirinda `Odeme Isle` butonu bulunur; gecmis veya yeni odeme buradan islenir.
+- `+ Cari Hareket` butonu tedarikci, urun/hizmet, organizasyon, tarih, alacak/tutar, odenen ve not alanlariyla popup acar.
+- Tedarikci tanim kartlari cari raporun altinda kalir; cari hareket detaylari kartlari kalabaliklastirmaz.
 
 ## GitHub baglantisi
 
