@@ -1227,7 +1227,7 @@ textarea {
 }
 
 .reservation-page {
-  padding-bottom: 72px;
+  padding-bottom: 146px;
 }
 
 .form-grid.thirds {
@@ -1255,6 +1255,23 @@ textarea {
 .check-row strong {
   color: var(--amber);
   white-space: nowrap;
+}
+
+.section-total {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(219, 39, 119, .16);
+  border-radius: 8px;
+  background: #fff7fb;
+  color: #9d174d;
+  font-weight: 700;
+}
+
+.section-picked {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .check-row.flat {
@@ -1286,6 +1303,23 @@ textarea {
 
 .installment-line {
   margin-top: 22px;
+}
+
+.installment-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.installment-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
 }
 
 .center {
@@ -1321,6 +1355,95 @@ textarea {
   gap: 10px;
   padding: 14px 0;
   background: linear-gradient(180deg, transparent, rgba(248, 250, 252, .96) 32%);
+}
+
+.quote-floating-summary {
+  position: fixed;
+  right: 26px;
+  bottom: 88px;
+  left: min(380px, 24vw);
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr)) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(219, 39, 119, .18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 20px 44px rgba(15, 23, 42, .12);
+  backdrop-filter: blur(10px);
+}
+
+.cash-bottom-bar {
+  position: fixed;
+  left: max(18px, calc(282px + 18px));
+  right: 18px;
+  bottom: 14px;
+  z-index: 29;
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(120px, .8fr) minmax(120px, .8fr);
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(15, 23, 42, .08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, .12);
+  backdrop-filter: blur(10px);
+}
+
+.cash-bottom-bar button,
+.cash-bottom-bar div {
+  display: grid;
+  gap: 2px;
+  min-height: 46px;
+  padding: 8px 12px;
+  border: 1px solid rgba(226, 232, 240, .86);
+  border-radius: 8px;
+  background: #fff;
+  text-align: left;
+}
+
+.cash-bottom-bar button {
+  cursor: pointer;
+}
+
+.cash-bottom-bar span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cash-bottom-bar strong {
+  color: #0f766e;
+  font-size: 17px;
+}
+
+.cash-entry-panel,
+.cash-filter-panel {
+  margin-bottom: 18px;
+}
+
+.cash-summary article:nth-child(1) { border-top-color: var(--rose); }
+.cash-summary article:nth-child(2) { border-top-color: var(--green); }
+.cash-summary article:nth-child(3) { border-top-color: var(--amber); }
+.cash-summary article:nth-child(4) { border-top-color: var(--violet); }
+
+.quote-floating-summary div {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff7fb;
+}
+
+.quote-floating-summary span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.quote-floating-summary strong {
+  color: #be185d;
+  font-size: 18px;
 }
 
 .reservations-view {
@@ -1412,6 +1535,27 @@ textarea {
 .reservation-edit-button {
   margin-top: 10px;
   justify-self: end;
+}
+
+.reservation-card-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.btn.danger,
+.btn.secondary.danger-outline {
+  color: #be123c;
+}
+
+.btn.danger {
+  border-color: rgba(190, 18, 60, .18);
+  background: #ffe4e6;
+}
+
+.btn.secondary.danger-outline {
+  border-color: rgba(190, 18, 60, .22);
+  background: #fff;
 }
 
 .search-results {
@@ -1938,7 +2082,7 @@ button,
 }
 
 .content {
-  padding: 34px;
+  padding: 34px 34px 110px;
 }
 
 .page-title {
@@ -2482,6 +2626,8 @@ th {
   .sms-overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .monthly-chart { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .sms-grid, .staff-grid, .assignment-grid, .staff-report-summary { grid-template-columns: 1fr; }
+  .quote-floating-summary { left: 18px; right: 18px; }
+  .cash-bottom-bar { left: 18px; right: 18px; }
 }
 
 @media (max-width: 720px) {
@@ -2507,6 +2653,9 @@ th {
   .comparison-chart-row, .chart-line { grid-template-columns: 1fr; }
   .reservation-details { gap: 12px; }
   .reservation-money { justify-items: start; }
+  .quote-floating-summary { grid-template-columns: 1fr; }
+  .installment-row { grid-template-columns: 1fr; }
+  .cash-bottom-bar { grid-template-columns: 1fr; }
 }
 
 @media print {
@@ -2515,6 +2664,8 @@ th {
   .report-actions,
   .tabs,
   .filters,
+  .cash-bottom-bar,
+  .quote-floating-summary,
   .toast {
     display: none !important;
   }

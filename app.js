@@ -97,6 +97,7 @@ const seed = {
     { id: makeId(), name: "Video Prodüksiyonu", category: "Video", phone: "0536 555 8899", balance: -10000 }
   ],
   supplierTransactions: [],
+  cashTransactions: [],
   specialDays: [
     { date: "2026-01-01", title: "Yılbaşı" },
     { date: "2026-03-20", title: "Ramazan Bayramı Arifesi" },
@@ -193,7 +194,7 @@ const toast = document.querySelector("#toast");
 const sidebar = document.querySelector(".sidebar");
 const accountPill = document.querySelector("#accountPill");
 const smsCreditPill = document.querySelector("#smsCreditPill");
-const tenantScopedCollections = ["organizationTypes", "halls", "packages", "extras", "menuCategories", "menus", "reservations", "smsTemplates", "stock", "staff", "staffAssignments", "suppliers", "supplierTransactions"];
+const tenantScopedCollections = ["organizationTypes", "halls", "packages", "extras", "menuCategories", "menus", "reservations", "smsTemplates", "stock", "staff", "staffAssignments", "suppliers", "supplierTransactions", "cashTransactions"];
 normalizeState();
 
 function loadState() {
@@ -220,6 +221,7 @@ function normalizeState() {
   if (!Array.isArray(state.reservations)) state.reservations = [];
   if (!Array.isArray(state.staffAssignments)) state.staffAssignments = [];
   if (!Array.isArray(state.supplierTransactions)) state.supplierTransactions = [];
+  if (!Array.isArray(state.cashTransactions)) state.cashTransactions = [];
   ensureDemoData();
   assignTenantIds();
   ensureTenantDemoReservations();
@@ -948,9 +950,13 @@ function categoryName(value) {
 function statusLabel(value) {
   return {
     canli_gorusme: "Canlı Görüşme",
-    kapora_alindi: "Kapora Alındı",
+    kapora_alindi: "Sözleşme",
     sozlesme: "Sözleşme"
   }[value] || value || "Görüşme";
+}
+
+function supplierName(id) {
+  return scopedItems("suppliers").find(item => item.id === id)?.name || "Tedarikçi seçilmedi";
 }
 
 function selectOptions(items, selected = "", allLabel = null) {
@@ -1113,6 +1119,106 @@ function renderAccountPill() {
   }
 }
 
+function reservationLabel(id) {
+  const reservation = state.reservations.find(item => item.id === id);
+  if (!reservation) return "Organizasyon seçilmedi";
+  const date = reservation.date ? new Date(reservation.date).toLocaleDateString("tr-TR") : "";
+  return `${reservation.couple}${date ? ` · ${date}` : ""}`;
+}
+
+function cashMovementLabel(type) {
+  return {
+    reservation: "Rezervasyon Tahsilatı",
+    supplier: "Tedarikçi Ödemesi",
+    staff: "Personel Ödemesi",
+    manual: "Manuel Kasa Hareketi"
+  }[type] || "Kasa Hareketi";
+}
+
+function derivedCashMovements() {
+  const tenantId = currentTenant()?.id;
+  const reservations = visibleReservations()
+    .filter(item => !item.comparisonDemoReservation && Number(item.paid || 0) > 0)
+    .map(item => ({
+      id: `reservation_${item.id}`,
+      tenantId: item.tenantId || tenantId,
+      source: "reservation",
+      direction: "income",
+      date: item.contractDate || item.date || today(),
+      reservationId: item.id,
+      title: `${item.couple} tahsilatı`,
+      category: "Rezervasyon",
+      description: `${item.couple} organizasyonu kapora/tahsilat`,
+      amount: Number(item.paid || 0),
+      auto: true
+    }));
+  const suppliers = scopedItems("supplierTransactions")
+    .filter(item => Number(item.paid || 0) > 0)
+    .map(item => ({
+      id: `supplier_${item.id}`,
+      tenantId: item.tenantId || tenantId,
+      source: "supplier",
+      direction: "expense",
+      date: item.date || today(),
+      reservationId: item.reservationId || "",
+      title: `${supplierName(item.supplierId)} ödemesi`,
+      category: "Tedarikçi",
+      description: item.product || item.description || "Tedarikçi ödemesi",
+      amount: Number(item.paid || 0),
+      auto: true
+    }));
+  const staff = scopedItems("staffAssignments")
+    .filter(item => Number(item.paid || 0) > 0)
+    .map(item => {
+      const staffMember = state.staff.find(row => row.id === item.staffId);
+      return {
+        id: `staff_${item.id}`,
+        tenantId: item.tenantId || tenantId,
+        source: "staff",
+        direction: "expense",
+        date: item.date || today(),
+        reservationId: item.reservationId || "",
+        title: `${staffMember?.name || "Personel"} ödemesi`,
+        category: "Personel",
+        description: item.role || staffMember?.role || "Personel ödemesi",
+        amount: Number(item.paid || 0),
+        auto: true
+      };
+    });
+  const manual = scopedItems("cashTransactions").map(item => ({ source: "manual", auto: false, ...item }));
+  return [...reservations, ...suppliers, ...staff, ...manual]
+    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+}
+
+function cashTotals(movements = derivedCashMovements()) {
+  return movements.reduce((acc, item) => {
+    if (item.direction === "income") acc.income += Number(item.amount || 0);
+    if (item.direction === "expense") acc.expense += Number(item.amount || 0);
+    return acc;
+  }, { income: 0, expense: 0 });
+}
+
+function renderCashBottomBar() {
+  let bar = document.querySelector("#cashBottomBar");
+  if (!bar) {
+    bar = document.createElement("aside");
+    bar.id = "cashBottomBar";
+    document.body.appendChild(bar);
+  }
+  const movements = derivedCashMovements();
+  const totals = cashTotals(movements);
+  const todayValue = today();
+  const todayTotals = cashTotals(movements.filter(item => item.date === todayValue));
+  bar.className = `cash-bottom-bar ${state.activeView === "newReservation" ? "with-quote" : ""}`;
+  bar.innerHTML = `
+    <button type="button" data-view="cash">
+      <span>Kasa</span><strong>${money(totals.income - totals.expense)}</strong>
+    </button>
+    <div><span>Bugün Giriş</span><strong>${money(todayTotals.income)}</strong></div>
+    <div><span>Bugün Çıkış</span><strong>${money(todayTotals.expense)}</strong></div>
+  `;
+}
+
 function attr(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -1234,12 +1340,15 @@ function renderNewReservation() {
   const menuCategories = scopedItems("menuCategories");
   const menus = scopedItems("menus");
   const selectedDate = state.newReservationDate || editing?.date || "";
-  const selectedHall = editing?.hallId || "";
-  const selectedPackage = editing?.packageId || "";
-  const organizationPrice = editing ? Math.max(0, Math.round(Number(editing.total || 0) / 1.2)) : 0;
+  const selectedHall = editing?.hallId || halls.find(item => sameText(item.name, editing?.hallName))?.id || "";
+  const selectedPackage = editing?.packageId || packages.find(item => sameText(item.name, editing?.packageName))?.id || "";
+  const selectedStatus = editing?.status === "canli_gorusme" ? "canli_gorusme" : "sozlesme";
+  const selectedExtraIds = selectedLineIds("extras", editing, extras);
+  const selectedMenuIds = selectedLineIds("menus", editing, menus);
+  const organizationPrice = editing ? Number(editing.organizationPrice ?? Math.max(0, Math.round(Number(editing.total || 0) / 1.2))) : 0;
   root.innerHTML = `
     <div class="reservation-page">
-      <a class="back-link" href="#dashboard" data-view="dashboard">← ${editing ? "Rezervasyon Düzenle" : "Yeni Rezervasyon"}</a>
+      <a class="back-link" href="#reservations" data-view="reservations">← Rezervasyon Listesine Dön</a>
       <form id="detailedReservationForm">
         <section class="panel compact-panel">
           <h2>Düğün Tarih Bilgisi</h2>
@@ -1249,7 +1358,7 @@ function renderNewReservation() {
             <div class="field"><label>Düğün Tarihi *</label><input name="date" type="date" value="${attr(selectedDate)}" required></div>
             <div class="field"><label>Organizasyon Türü *</label><select name="type" required>${selectOptions(organizationTypes, editing?.type || "", "Seçiniz")}</select></div>
             <div class="field"><label>Düğün Zamanı</label><select name="timeSlot"><option>Akşam</option><option>Öğlen</option><option>Kokteyl</option></select></div>
-            <div class="field"><label>Durum</label><select name="status"><option value="canli_gorusme" ${editing?.status === "canli_gorusme" ? "selected" : ""}>Canlı Görüşme</option><option value="kapora_alindi" ${editing?.status === "kapora_alindi" ? "selected" : ""}>Kapora Alındı</option><option value="sozlesme" ${editing?.status === "sozlesme" ? "selected" : ""}>Sözleşme</option></select></div>
+            <div class="field"><label>Durum</label><select name="status"><option value="canli_gorusme" ${selectedStatus === "canli_gorusme" ? "selected" : ""}>Canlı Görüşme</option><option value="sozlesme" ${selectedStatus === "sozlesme" ? "selected" : ""}>Sözleşme</option></select></div>
           </div>
         </section>
 
@@ -1265,13 +1374,16 @@ function renderNewReservation() {
             <div class="field"><label>Ayrıca Davetli</label><input name="extraGuests" type="number" min="0" placeholder="Paket üstü davetli sayısı"></div>
             <div class="field"><label>Kişi Başı Fiyat (₺)</label><input name="manualPersonPrice" id="quoteManualPersonPrice" type="number" min="0" placeholder="Paket dışı fiyat"></div>
           </div>
+          <div class="section-total" id="hallPackageSectionTotal">Salon + paket toplamı: ₺0</div>
         </section>
 
         <section class="panel compact-panel">
           <h2>Özel</h2>
           <div class="choice-list">
-            ${extras.map(item => checkboxPriceRow("extras", item.id, item.name, item.price)).join("")}
+            ${extras.map(item => checkboxPriceRow("extras", item.id, `${item.name} · ${supplierName(item.supplierId)}`, item.price, "", item.cost, selectedExtraIds.includes(item.id))).join("")}
           </div>
+          <div class="section-total" id="extraSectionTotal">Özel seçim toplamı: ₺0</div>
+          <div class="section-picked" id="extraPickedList">Seçili özel ürün/hizmet yok.</div>
         </section>
 
         <section class="panel compact-panel">
@@ -1279,8 +1391,9 @@ function renderNewReservation() {
           ${menuCategories.map(category => {
             const items = menus.filter(menu => menu.category === category.value);
             if (!items.length) return "";
-            return `<div class="menu-group"><h3>${category.name}</h3><div class="choice-list">${items.map(item => checkboxPriceRow("menus", item.id, item.name, item.price, "kişi")).join("")}</div></div>`;
+            return `<div class="menu-group"><h3>${category.name}</h3><div class="choice-list">${items.map(item => checkboxPriceRow("menus", item.id, item.name, item.price, "kişi", item.cost, selectedMenuIds.includes(item.id))).join("")}</div></div>`;
           }).join("")}
+          <div class="section-total" id="menuSectionTotal">Yemek menüsü toplamı: ₺0</div>
         </section>
 
         <section class="panel compact-panel">
@@ -1294,9 +1407,10 @@ function renderNewReservation() {
           </div>
           <div class="installment-line">
             <strong>Taksit</strong>
-            <button class="btn secondary" type="button">+ Taksit Ekle</button>
+            <button class="btn secondary" type="button" data-action="addInstallment">+ Taksit Ekle</button>
           </div>
-          <p class="hint center">Henüz taksit eklenmedi. "Taksit Ekle" butonuna tıklayarak taksit planı oluşturabilirsiniz.</p>
+          <div id="installmentList" class="installment-list">${installmentRows(editing?.installments || [])}</div>
+          <p class="hint center" id="installmentHint" ${editing?.installments?.length ? "hidden" : ""}>Henüz taksit eklenmedi. "Taksit Ekle" butonuna tıklayarak taksit planı oluşturabilirsiniz.</p>
         </section>
 
         <section class="panel compact-panel">
@@ -1324,9 +1438,15 @@ function renderNewReservation() {
         </section>
 
         <div class="sticky-actions">
-          <button class="btn secondary" type="button" data-view="dashboard">İptal</button>
+          <button class="btn secondary" type="button" data-view="reservations">İptal</button>
           <button class="btn" type="submit">${editing ? "Değişiklikleri Kaydet" : "Rezervasyon Kaydet"}</button>
         </div>
+        <aside class="quote-floating-summary" aria-live="polite">
+          <div><span>Genel Toplam</span><strong id="quoteFloatingTotal">₺0</strong></div>
+          <div><span>Tahsilat</span><strong id="quoteFloatingPaid">₺0</strong></div>
+          <div><span>Kalan</span><strong id="quoteFloatingRemaining">₺0</strong></div>
+          <button class="btn dark" type="submit">${editing ? "Kaydet" : "Kaydet"}</button>
+        </aside>
       </form>
     </div>
   `;
@@ -1351,12 +1471,37 @@ function personSection(title, prefix, reservation = null) {
   `;
 }
 
-function checkboxPriceRow(name, id, label, price, suffix = "") {
+function selectedLineIds(field, reservation, catalog) {
+  const selected = reservation?.[field] || [];
+  return catalog
+    .filter(item => selected.some(raw => {
+      if (typeof raw === "string") return sameText(raw, item.name);
+      return raw.id === item.id || sameText(raw.name, item.name);
+    }))
+    .map(item => item.id);
+}
+
+function checkboxPriceRow(name, id, label, price, suffix = "", cost = 0, checked = false) {
   return `
     <label class="check-row">
-      <span><input type="checkbox" name="${name}" value="${id}" data-price="${price}"> ${label}</span>
+      <span><input type="checkbox" name="${name}" value="${id}" data-price="${price}" data-cost="${cost || 0}" data-label="${attr(label)}" ${checked ? "checked" : ""}> ${label}</span>
       <strong>${money(price)}${suffix ? ` / ${suffix}` : ""}</strong>
     </label>
+  `;
+}
+
+function installmentRows(items = []) {
+  return items.map(item => installmentRow(item.date, item.amount, item.note)).join("");
+}
+
+function installmentRow(date = "", amount = "", note = "") {
+  return `
+    <div class="installment-row">
+      <div class="field"><label>Taksit Tarihi</label><input name="installmentDate" type="date" value="${attr(date)}"></div>
+      <div class="field"><label>Taksit Tutarı</label><input name="installmentAmount" type="number" min="0" value="${attr(amount)}"></div>
+      <div class="field"><label>Not</label><input name="installmentNote" value="${attr(note)}" placeholder="1. taksit, banka vb."></div>
+      <button class="small-icon delete" type="button" data-action="removeInstallment">Sil</button>
+    </div>
   `;
 }
 
@@ -1397,7 +1542,12 @@ function reservationCard(item) {
         <strong>${money(item.total)}</strong>
         <span>Kalan</span>
         <b>${money(remaining)}</b>
-        <button class="btn secondary reservation-edit-button" type="button" data-action="editReservation" data-id="${item.id}">Düzenle</button>
+        <div class="reservation-card-actions">
+          <button class="btn secondary reservation-edit-button" type="button" data-action="editReservation" data-id="${item.id}">Düzenle</button>
+          ${state.pendingReservationDeleteId === item.id
+            ? `<button class="btn danger reservation-edit-button" type="button" data-action="confirmDeleteReservation" data-id="${item.id}">Silinsin mi?</button><button class="btn secondary reservation-edit-button" type="button" data-action="cancelDeleteReservation">Vazgeç</button>`
+            : `<button class="btn secondary danger-outline reservation-edit-button" type="button" data-action="deleteReservation" data-id="${item.id}">Sil</button>`}
+        </div>
       </div>
     </article>
   `;
@@ -2615,6 +2765,91 @@ function renderSupplierAccount() {
   `;
 }
 
+function filteredCashMovements() {
+  const reservationId = state.cashReportReservationId || "";
+  const type = state.cashReportType || "";
+  const start = state.cashReportStart || `${state.year}-01-01`;
+  const end = state.cashReportEnd || `${state.year}-12-31`;
+  return derivedCashMovements()
+    .filter(item => !reservationId || item.reservationId === reservationId)
+    .filter(item => !type || item.direction === type || item.source === type)
+    .filter(item => (!start || item.date >= start) && (!end || item.date <= end));
+}
+
+function cashTransactionForm() {
+  const reservations = visibleReservations()
+    .filter(item => !item.comparisonDemoReservation)
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const expenseCategories = ["Elektrik", "Su", "Kira", "Doğalgaz", "Reklam", "Temizlik", "Bakım Onarım", "Mutfak Gideri", "Diğer"];
+  return `
+    <section class="panel cash-entry-panel">
+      <h2>Manuel Kasa Hareketi</h2>
+      <form id="cashForm">
+        <div class="form-grid">
+          <div class="field"><label>İşlem Tipi</label><select name="direction"><option value="expense">Çıkış / Masraf</option><option value="income">Giriş / Tahsilat</option></select></div>
+          <div class="field"><label>Organizasyon</label><select name="reservationId"><option value="">Genel gider / organizasyonsuz</option>${reservations.map(item => `<option value="${item.id}">${reservationLabel(item.id)}</option>`).join("")}</select></div>
+          <div class="field"><label>Kategori</label><input name="category" list="cashCategories" required placeholder="Elektrik, kira, ek tahsilat..."><datalist id="cashCategories">${expenseCategories.map(item => `<option value="${item}"></option>`).join("")}</datalist></div>
+          <div class="field"><label>Tarih</label><input name="date" type="date" value="${today()}"></div>
+          <div class="field"><label>Tutar</label><input name="amount" type="number" min="0" required placeholder="0"></div>
+          <div class="field"><label>Açıklama</label><input name="description" placeholder="Örn: Mina organizasyonu çiçek ek masrafı"></div>
+        </div>
+        <div class="form-actions"><button class="btn dark" type="submit">Kasaya İşle</button></div>
+      </form>
+    </section>
+  `;
+}
+
+function renderCash() {
+  const movements = filteredCashMovements();
+  const totals = cashTotals(movements);
+  const balance = totals.income - totals.expense;
+  const reservations = visibleReservations()
+    .filter(item => !item.comparisonDemoReservation)
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const selectedReservation = state.cashReportReservationId ? state.reservations.find(item => item.id === state.cashReportReservationId) : null;
+  root.innerHTML = `
+    ${pageHeader("Kasa ve Organizasyon Finansları")}
+    <div class="stats-grid">
+      ${statCard("Kasa Bakiyesi", money(balance), "▧", balance >= 0 ? "green" : "red")}
+      ${statCard("Toplam Giriş", money(totals.income), "↗", "green")}
+      ${statCard("Toplam Çıkış", money(totals.expense), "↘", "orange")}
+      ${statCard("Hareket Sayısı", movements.length, "☷", "blue")}
+    </div>
+    <section class="panel cash-filter-panel">
+      <h2>Organizasyon Bazlı Kasa</h2>
+      <div class="filters supplier-report-filters">
+        <div class="field"><label>Organizasyon</label><select id="cashReportReservation"><option value="">Tüm organizasyonlar</option>${reservations.map(item => `<option value="${item.id}" ${state.cashReportReservationId === item.id ? "selected" : ""}>${reservationLabel(item.id)}</option>`).join("")}</select></div>
+        <div class="field"><label>Hareket</label><select id="cashReportType"><option value="">Tümü</option><option value="income" ${state.cashReportType === "income" ? "selected" : ""}>Sadece girişler</option><option value="expense" ${state.cashReportType === "expense" ? "selected" : ""}>Sadece çıkışlar</option><option value="supplier" ${state.cashReportType === "supplier" ? "selected" : ""}>Tedarikçi</option><option value="staff" ${state.cashReportType === "staff" ? "selected" : ""}>Personel</option><option value="manual" ${state.cashReportType === "manual" ? "selected" : ""}>Manuel</option></select></div>
+        <div class="field"><label>Başlangıç</label><input id="cashReportStart" type="date" value="${state.cashReportStart || `${state.year}-01-01`}"></div>
+        <div class="field"><label>Bitiş</label><input id="cashReportEnd" type="date" value="${state.cashReportEnd || `${state.year}-12-31`}"></div>
+      </div>
+      <div class="staff-report-summary cash-summary">
+        <article><span>Organizasyon</span><strong>${selectedReservation ? selectedReservation.couple : "Tüm organizasyonlar"}</strong><small>${selectedReservation ? selectedReservation.hallName || "" : "Genel kasa görünümü"}</small></article>
+        <article><span>Giriş</span><strong class="profit">${money(totals.income)}</strong></article>
+        <article><span>Çıkış</span><strong class="danger-text">${money(totals.expense)}</strong></article>
+        <article><span>Net</span><strong class="${balance >= 0 ? "profit" : "danger-text"}">${money(balance)}</strong></article>
+      </div>
+    </section>
+    ${cashTransactionForm()}
+    <section class="panel">
+      <h2>Kasa Hareketleri</h2>
+      ${movements.length ? table(["Tarih", "Hareket", "Organizasyon", "Kategori", "Açıklama", "Giriş", "Çıkış", "Kaynak", ""], movements.map(item => [
+        new Date(item.date).toLocaleDateString("tr-TR"),
+        item.direction === "income" ? `<span class="badge ok">Giriş</span>` : `<span class="badge danger">Çıkış</span>`,
+        item.reservationId ? reservationLabel(item.reservationId) : "Genel",
+        item.category || "-",
+        item.description || item.title || "-",
+        item.direction === "income" ? `<strong class="profit">${money(item.amount)}</strong>` : "-",
+        item.direction === "expense" ? `<strong class="danger-text">${money(item.amount)}</strong>` : "-",
+        cashMovementLabel(item.source),
+        item.auto ? `<span class="muted">Otomatik</span>` : `<button class="table-action-btn delete" type="button" data-action="deleteCashTransaction" data-id="${item.id}">Sil</button>`
+      ])) : empty("Bu filtreye uygun kasa hareketi yok", "Rezervasyon tahsilatı, tedarikçi/personel ödemesi veya manuel gider ekleyin.")}
+    </section>
+  `;
+}
+
 function tenantStats(tenantId) {
   const reservations = state.reservations.filter(item => item.tenantId === tenantId);
   const revenue = reservations.reduce((sum, item) => sum + Number(item.total || 0), 0);
@@ -2810,9 +3045,10 @@ function renderPackages() {
 
 function renderExtras() {
   const editing = currentManagementEdit("extras");
+  const suppliers = scopedItems("suppliers");
   root.innerHTML = `
     ${pageTitle("✦", "Özelleştirme Yönetimi")}
-    <section class="panel"><h2>${editing ? "Özel Seçimi Düzenle" : "Yeni Özel Seçim Ekle"}</h2><form id="extraForm"><div class="form-grid"><div class="field"><label>Öğe Adı *</label><input name="name" required placeholder="Örn: Düğün Pastası" value="${attr(editing?.name || "")}"></div><div class="field"><label>Organizasyon Türü</label><select name="type">${selectOptions(scopedItems("organizationTypes"), editing?.type || "", "Tümü")}</select></div><div class="field"><label>Alış Fiyatı (₺) *</label><input name="cost" type="number" min="0" required placeholder="Takımınız" value="${attr(editing?.cost ?? "")}"></div><div class="field"><label>Satış Fiyatı (₺) *</label><input name="price" type="number" min="0" required placeholder="Müşteri fiyatı" value="${attr(editing?.price ?? "")}"></div></div>${managementActions(editing ? "Özeli Güncelle" : "+ Özel Ekle", editing)}</form></section>
+    <section class="panel"><h2>${editing ? "Özel Seçimi Düzenle" : "Yeni Özel Seçim Ekle"}</h2><form id="extraForm"><div class="form-grid"><div class="field"><label>Öğe Adı *</label><input name="name" required placeholder="Örn: Düğün Pastası" value="${attr(editing?.name || "")}"></div><div class="field"><label>Tedarikçi</label><select name="supplierId"><option value="">Tedarikçi seçin</option>${suppliers.map(item => `<option value="${item.id}" ${editing?.supplierId === item.id ? "selected" : ""}>${item.name}</option>`).join("")}</select></div><div class="field"><label>Alış Fiyatı (₺) *</label><input name="cost" type="number" min="0" required placeholder="Tedarikçi alış fiyatı" value="${attr(editing?.cost ?? "")}"></div><div class="field"><label>Satış Fiyatı (₺) *</label><input name="price" type="number" min="0" required placeholder="Müşteri satış fiyatı" value="${attr(editing?.price ?? "")}"></div></div>${managementActions(editing ? "Özeli Güncelle" : "+ Özel Ekle", editing)}</form></section>
     <section class="panel"><h2>Mevcut Özeller</h2><div class="list">${scopedItems("extras").map(extraRow).join("") || empty("Henüz özel seçim eklenmedi")}</div></section>
   `;
 }
@@ -2854,7 +3090,7 @@ function packageRow(item) {
 }
 
 function extraRow(item) {
-  return `<article class="item-row"><div><div class="item-title">${item.name} <span class="tag">${typeName(item.type)}</span></div><div class="meta"><span>Alış: ${money(item.cost)}</span><span>Satış: ${money(item.price)}</span><span class="profit">Kar: ${money(item.price - item.cost)}</span></div></div><div class="row-actions"><button class="small-icon" data-edit-extra="${item.id}">✎</button><button class="small-icon delete" data-delete-extra="${item.id}">⌫</button></div></article>`;
+  return `<article class="item-row"><div><div class="item-title">${item.name} <span class="tag">${supplierName(item.supplierId)}</span></div><div class="meta"><span>Alış: ${money(item.cost)}</span><span>Satış: ${money(item.price)}</span><span class="profit">Kar: ${money(item.price - item.cost)}</span></div></div><div class="row-actions"><button class="small-icon" data-edit-extra="${item.id}">✎</button><button class="small-icon delete" data-delete-extra="${item.id}">⌫</button></div></article>`;
 }
 
 function menuRow(item) {
@@ -2918,16 +3154,37 @@ function quoteTotals(form) {
   const packageItem = scopedItems("packages").find(item => item.id === form.quotePackage?.value);
   const base = Number(form.quoteOrganizationPrice?.value || 0);
   const packageTotal = packageItem ? Number(packageItem.price || 0) + guests * Number(packageItem.personPrice || 0) : 0;
+  const packageCost = packageItem ? Number(packageItem.cost || 0) + guests * Number(packageItem.personCost || 0) : 0;
   const manualPerson = Number(form.quoteManualPersonPrice?.value || 0) * guests;
-  const extras = [...form.querySelectorAll('input[name="extras"]:checked')].reduce((sum, input) => sum + Number(input.dataset.price || 0), 0);
-  const menus = [...form.querySelectorAll('input[name="menus"]:checked')].reduce((sum, input) => sum + Number(input.dataset.price || 0) * guests, 0);
+  const extraInputs = [...form.querySelectorAll('input[name="extras"]:checked')];
+  const menuInputs = [...form.querySelectorAll('input[name="menus"]:checked')];
+  const extras = extraInputs.reduce((sum, input) => sum + Number(input.dataset.price || 0), 0);
+  const extraCost = extraInputs.reduce((sum, input) => sum + Number(input.dataset.cost || 0), 0);
+  const menus = menuInputs.reduce((sum, input) => sum + Number(input.dataset.price || 0) * guests, 0);
+  const menuCost = menuInputs.reduce((sum, input) => sum + Number(input.dataset.cost || 0) * guests, 0);
   const subtotal = base + packageTotal + manualPerson + extras + menus;
   const discount = Number(form.quoteDiscount?.value || 0);
   const discountType = form.discountType?.value || "amount";
   const afterDiscount = Math.max(0, subtotal - (discountType === "percent" ? subtotal * discount / 100 : discount));
   const vatRate = Number(form.quoteVat?.value || 0);
   const vat = afterDiscount * vatRate / 100;
-  return { subtotal, afterDiscount, vat, grandTotal: afterDiscount + vat };
+  const paid = Number(form.quoteDeposit?.value || 0);
+  const grandTotal = afterDiscount + vat;
+  return {
+    subtotal,
+    afterDiscount,
+    vat,
+    grandTotal,
+    paid,
+    remaining: Math.max(0, grandTotal - paid),
+    costTotal: packageCost + extraCost + menuCost,
+    sections: {
+      hallPackage: base + packageTotal + manualPerson,
+      extras,
+      menus
+    },
+    selectedExtras: extraInputs.map(input => input.dataset.label || input.closest(".check-row")?.innerText || "")
+  };
 }
 
 function updateQuote() {
@@ -2938,6 +3195,38 @@ function updateQuote() {
   document.querySelector("#quoteAfterDiscount").textContent = money(totals.afterDiscount);
   document.querySelector("#quoteVatAmount").textContent = money(totals.vat);
   document.querySelector("#quoteGrandTotal").textContent = money(totals.grandTotal);
+  document.querySelector("#hallPackageSectionTotal").textContent = `Salon + paket toplamı: ${money(totals.sections.hallPackage)}`;
+  document.querySelector("#extraSectionTotal").textContent = `Özel seçim toplamı: ${money(totals.sections.extras)}`;
+  document.querySelector("#menuSectionTotal").textContent = `Yemek menüsü toplamı: ${money(totals.sections.menus)}`;
+  document.querySelector("#extraPickedList").textContent = totals.selectedExtras.length ? `Seçilenler: ${totals.selectedExtras.join(", ")}` : "Seçili özel ürün/hizmet yok.";
+  document.querySelector("#quoteFloatingTotal").textContent = money(totals.grandTotal);
+  document.querySelector("#quoteFloatingPaid").textContent = money(totals.paid);
+  document.querySelector("#quoteFloatingRemaining").textContent = money(totals.remaining);
+}
+
+function selectedCatalogLines(form, field, catalogName) {
+  const catalog = scopedItems(catalogName);
+  return [...form.querySelectorAll(`input[name="${field}"]:checked`)].map(input => {
+    const item = catalog.find(row => row.id === input.value);
+    return {
+      id: input.value,
+      name: item?.name || input.dataset.label || input.value,
+      price: Number(input.dataset.price || item?.price || 0),
+      cost: Number(input.dataset.cost || item?.cost || 0),
+      supplierId: item?.supplierId || ""
+    };
+  });
+}
+
+function collectInstallments(form) {
+  const dates = [...form.querySelectorAll('input[name="installmentDate"]')];
+  const amounts = [...form.querySelectorAll('input[name="installmentAmount"]')];
+  const notes = [...form.querySelectorAll('input[name="installmentNote"]')];
+  return dates.map((input, index) => ({
+    date: input.value,
+    amount: Number(amounts[index]?.value || 0),
+    note: notes[index]?.value || ""
+  })).filter(item => item.date || item.amount || item.note);
 }
 
 function bindForms() {
@@ -3036,7 +3325,7 @@ function bindForms() {
     const data = Object.fromEntries(new FormData(event.target));
     saveManagedItem(
       "extras",
-      { name: data.name, type: data.type || "Tümü", cost: Number(data.cost), price: Number(data.price) },
+      { name: data.name, supplierId: data.supplierId || "", type: data.type || "", cost: Number(data.cost), price: Number(data.price) },
       "Özel seçim eklendi",
       "Özel seçim güncellendi"
     );
@@ -3225,6 +3514,7 @@ function bindForms() {
     event.preventDefault();
     const form = event.target;
     const data = Object.fromEntries(new FormData(form));
+    const editingReservation = state.editingReservationId ? state.reservations.find(item => item.id === state.editingReservationId) : null;
     const special = (state.specialDays || []).find(item => item.date === data.date);
     if (special) {
       showToast(`${special.title}: bu özel güne rezervasyon açılmamalı.`);
@@ -3235,7 +3525,7 @@ function bindForms() {
     const packageItem = scopedItems("packages").find(item => item.id === data.packageId);
     const couple = `${data.brideName || "Gelin"} ve ${data.groomName || "Damat"}`;
     const reservation = {
-      tenantId: editing?.tenantId || currentTenant()?.id,
+      tenantId: editingReservation?.tenantId || currentTenant()?.id,
       brideName: data.brideName,
       groomName: data.groomName,
       couple,
@@ -3248,12 +3538,16 @@ function bindForms() {
       packageId: data.packageId,
       packageName: packageItem?.name || "Paket seçilmedi",
       guests: Number(data.guests || 0),
+      organizationPrice: Number(data.organizationPrice || 0),
       total: Math.round(totals.grandTotal),
-      cost: Math.round(totals.grandTotal * 0.62),
+      cost: Math.round(totals.costTotal),
       paid: Number(data.deposit || 0),
       status: data.status,
+      extras: selectedCatalogLines(form, "extras", "extras"),
+      menus: selectedCatalogLines(form, "menus", "menus"),
+      installments: collectInstallments(form),
       createdAt: state.editingReservationId
-        ? state.reservations.find(item => item.id === state.editingReservationId)?.createdAt || new Date().toLocaleString("tr-TR")
+        ? editingReservation?.createdAt || new Date().toLocaleString("tr-TR")
         : new Date().toLocaleString("tr-TR")
     };
     if (state.editingReservationId) {
@@ -3367,6 +3661,49 @@ function bindForms() {
     render();
   });
 
+  document.querySelector("#cashReportReservation")?.addEventListener("change", event => {
+    state.cashReportReservationId = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#cashReportType")?.addEventListener("change", event => {
+    state.cashReportType = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#cashReportStart")?.addEventListener("change", event => {
+    state.cashReportStart = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#cashReportEnd")?.addEventListener("change", event => {
+    state.cashReportEnd = event.target.value;
+    saveState();
+    render();
+  });
+
+  document.querySelector("#cashForm")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.target));
+    state.cashTransactions = [{
+      id: makeId(),
+      tenantId: currentTenant()?.id,
+      source: "manual",
+      direction: data.direction,
+      reservationId: data.reservationId || "",
+      category: data.category,
+      date: data.date || today(),
+      amount: Number(data.amount || 0),
+      description: data.description
+    }, ...state.cashTransactions];
+    saveState();
+    render();
+    showToast("Kasa hareketi işlendi");
+  });
+
   updateQuote();
 }
 
@@ -3410,10 +3747,12 @@ function render() {
     staff: renderStaff,
     suppliers: renderSuppliers,
     supplierAccount: renderSupplierAccount,
+    cash: renderCash,
     stock: renderStock
   };
   (views[state.activeView] || views.dashboard)();
   bindForms();
+  renderCashBottomBar();
 }
 
 document.addEventListener("click", event => {
@@ -3454,6 +3793,47 @@ document.addEventListener("click", event => {
     state.newReservationDate = null;
     saveState();
     setView("newReservation");
+    return;
+  }
+  if (action === "deleteReservation") {
+    const id = actionEl?.dataset.id;
+    if (!state.reservations.some(item => item.id === id)) return;
+    state.pendingReservationDeleteId = id;
+    saveState();
+    render();
+    showToast("Rezervasyonu silmek için onayla");
+    return;
+  }
+  if (action === "cancelDeleteReservation") {
+    state.pendingReservationDeleteId = null;
+    saveState();
+    render();
+    return;
+  }
+  if (action === "confirmDeleteReservation") {
+    const id = actionEl?.dataset.id;
+    state.reservations = state.reservations.filter(item => item.id !== id);
+    if (state.editingReservationId === id) state.editingReservationId = null;
+    state.pendingReservationDeleteId = null;
+    saveState();
+    render();
+    showToast("Rezervasyon silindi");
+    return;
+  }
+  if (action === "addInstallment") {
+    const list = document.querySelector("#installmentList");
+    if (!list) return;
+    list.insertAdjacentHTML("beforeend", installmentRow());
+    document.querySelector("#installmentHint")?.setAttribute("hidden", "");
+    list.querySelector(".installment-row:last-child input")?.focus();
+    return;
+  }
+  if (action === "removeInstallment") {
+    actionEl?.closest(".installment-row")?.remove();
+    if (!document.querySelector("#installmentList .installment-row")) {
+      document.querySelector("#installmentHint")?.removeAttribute("hidden");
+    }
+    updateQuote();
     return;
   }
   if (action === "cancelManagementEdit") {
@@ -3632,6 +4012,14 @@ document.addEventListener("click", event => {
     saveState();
     render();
     showToast("Tedarikçi hareketi silindi");
+    return;
+  }
+  if (action === "deleteCashTransaction") {
+    const id = actionEl?.dataset.id;
+    state.cashTransactions = state.cashTransactions.filter(item => item.id !== id);
+    saveState();
+    render();
+    showToast("Kasa hareketi silindi");
     return;
   }
   if (action === "newStaffAssignment") {

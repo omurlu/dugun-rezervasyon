@@ -174,6 +174,37 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - `+ Cari Hareket` butonu tedarikci, urun/hizmet, organizasyon, tarih, alacak/tutar, odenen ve not alanlariyla popup acar.
 - Tedarikci tanim kartlari cari raporun altinda kalir; cari hareket detaylari kartlari kalabaliklastirmaz.
 
+## Rezervasyon Formu Notu
+
+- Rezervasyon yeni/duzenle ekraninda genel toplam, tahsilat ve kalan tutar sayfanin altinda sabit gorunen ozet bara alindi.
+- Salon + paket, ozel urun/hizmet ve yemek menusu bolumlerinin altina kendi ara toplam satirlari eklendi.
+- Ozel urun/hizmet seciminde secilen kalemler form icinde anlik listelenir.
+- Taksit ekleme butonu calisir hale getirildi; tarih, tutar ve not bilgisiyle taksit satirlari eklenip silinebilir.
+- Rezervasyon listesindeki kartlara silme akisi eklendi; ilk tiklama onay ister, ikinci tiklama kaydi siler.
+- Rezervasyon duzenleme ekranindaki geri/iptal butonlari artik ana takvime degil rezervasyon listesine doner.
+- Durum secimi sade hale getirildi: `Canli Gorusme` ve `Sozlesme`. Eski `Kapora Alindi` kayitlari gorunumde `Sozlesme` olarak ele alinir.
+- Eski kayitlarda sadece salon/paket adi varsa, duzenleme ekraninda salon ve paket secimi artik isimden eslestirilerek dolu gelir.
+- Rezervasyon kaydetme hatasina yol acabilecek duzenleme degiskeni duzeltildi; guncelleme sirasinda mevcut rezervasyon dogru bulunur.
+- Ozel secim taniminda organizasyon turu yerine tedarikci secimi eklendi. Satis fiyati rezervasyon gelirine, alis fiyati maliyet hesabina dahil edilir.
+
+## Canli Onizleme Notu
+
+- Bu projede yan taraftaki canli goruntu icin calisan adres `http://localhost:5500/`.
+- `http://127.0.0.1:5500/` Codex yan tarayicisinda bazen hata verebiliyor; bu yuzden oncelik `localhost:5500`.
+- Projeye devam ederken kullanici `canli goruntuyu ac` derse once yerel yayini 5500 portunda baslat, sonra yan tarayiciyi `http://localhost:5500/` adresine gotur.
+
+## Kasa ve Organizasyon Finans Notu
+
+- Sol menuye `Kasa` ekrani eklendi.
+- Kasa yapisi organizasyon merkezli kuruldu: rezervasyon tahsilatlari kasa girisi, tedarikci/personel odemeleri kasa cikisi olarak gorunur.
+- Rezervasyon kaydindaki tahsilat/kapora otomatik kasa girisi sayilir.
+- Tedarikci cari hareketinde `Odenen` tutar varsa otomatik kasa cikisi sayilir ve organizasyon secildiyse ilgili organizasyona baglanir.
+- Personel gorevlendirmesinde `Odenen` tutar varsa otomatik kasa cikisi sayilir ve ilgili organizasyona baglanir.
+- Elektrik, su, kira, reklam, temizlik, bakim onarim gibi genel giderler icin manuel kasa hareketi ekleme formu eklendi.
+- Manuel kasa hareketi istenirse organizasyona baglanabilir; organizasyonsuz genel gider olarak da kalabilir.
+- Kasa ekraninda organizasyon, hareket tipi ve tarih araligi filtreleri bulunur.
+- Sayfanin altina sabit kasa bari eklendi: kasa bakiyesi, bugun giris ve bugun cikis bilgisi her ekranda gorunur.
+
 ## GitHub baglantisi
 
 GitHub deposu olarak su adres not edildi:
