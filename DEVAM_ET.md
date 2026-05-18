@@ -240,7 +240,8 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - Her secimde teklif ozeti canli guncellenir: salon+paket, yemek/ikram, ozel secimler, iskonto sonrasi, tahsilat ve kalan.
 - Kasa alt bari bu ekranda gizlenir; ciftlerin gorecegi ekranda finans/kasa bilgisi cikmaz.
 - `Secimleri Temizle` butonu tablet ekranindaki secimleri ilk hale alir.
-- Tablet dikey/portre tutuldugunda teklif ozeti sagda durup ekrani daraltmaz; secimlerin altina iner.
+- Tablet sunum ekraninda teklif ozeti sag kolon olarak durmaz; her ekranda secimlerin altinda yer alir.
+- Tablet sunumda ekran altina sabit tek satir ozet eklendi: genel tutar, iskonto, tahsilat ve kalan. Detayli teklif ozeti sayfa sonunda kalir.
 
 ## Tedarikci Cari Notu
 

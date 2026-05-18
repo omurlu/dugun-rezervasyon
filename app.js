@@ -1650,6 +1650,12 @@ function renderTabletPresentation() {
           </div>
         </aside>
       </section>
+      <aside class="tablet-bottom-summary" aria-live="polite">
+        <div><span>Genel Tutar</span><strong id="tabletBottomTotal">${money(0)}</strong></div>
+        <div><span>İskonto</span><strong id="tabletBottomDiscount">${money(0)}</strong></div>
+        <div><span>Tahsilat</span><strong id="tabletBottomPaid">${money(0)}</strong></div>
+        <div><span>Kalan</span><strong id="tabletBottomRemaining">${money(0)}</strong></div>
+      </aside>
     </form>
   `;
 }
@@ -3671,6 +3677,8 @@ function tabletQuoteTotals(form) {
   const afterDiscount = Math.max(0, subtotal - discount);
   const remaining = Math.max(0, afterDiscount - paid);
   return {
+    subtotal,
+    discount,
     packageTotal: base + packageTotal,
     menus,
     extras,
@@ -3691,6 +3699,10 @@ function updateTabletQuote() {
   if (!form) return;
   const totals = tabletQuoteTotals(form);
   document.querySelector("#tabletGrandTotal").textContent = money(totals.afterDiscount);
+  document.querySelector("#tabletBottomTotal").textContent = money(totals.afterDiscount);
+  document.querySelector("#tabletBottomDiscount").textContent = money(totals.discount);
+  document.querySelector("#tabletBottomPaid").textContent = money(totals.paid);
+  document.querySelector("#tabletBottomRemaining").textContent = money(totals.remaining);
   document.querySelector("#tabletPackageTotal").textContent = money(totals.packageTotal);
   document.querySelector("#tabletMenuTotal").textContent = money(totals.menus);
   document.querySelector("#tabletExtraTotal").textContent = money(totals.extras);
