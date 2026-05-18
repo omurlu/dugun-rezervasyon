@@ -1144,7 +1144,7 @@ function saveManagedItem(collection, item, addedMessage, updatedMessage) {
 function syncNavigation(view) {
   document.querySelectorAll(".nav-link").forEach(link => {
     const target = link.dataset.view;
-    link.classList.toggle("active", target === view || (target === "suppliers" && view === "supplierAccount"));
+    link.classList.toggle("active", target === view || (target === "suppliers" && view === "supplierAccount") || (target === "menus" && view === "menuCategories"));
   });
   document.querySelectorAll(".top-nav a").forEach(link => {
     const target = link.dataset.view;
@@ -1281,6 +1281,8 @@ function renderCashBottomBar() {
     bar.id = "cashBottomBar";
     document.body.appendChild(bar);
   }
+  bar.hidden = state.activeView === "tabletPresentation";
+  if (bar.hidden) return;
   const movements = derivedCashMovements();
   const totals = cashTotals(movements);
   const todayValue = today();
@@ -1544,6 +1546,111 @@ function personSection(title, prefix, reservation = null) {
         <div class="field full"><label>Adres</label><textarea name="${prefix}Address"></textarea></div>
       </div>
     </section>
+  `;
+}
+
+function tabletChoiceCard(name, item, options = {}) {
+  const inputType = options.type || "checkbox";
+  const suffix = options.suffix || "";
+  const meta = options.meta || "";
+  const checked = options.checked ? "checked" : "";
+  const extraData = Object.entries(options.data || {}).map(([key, value]) => `data-${key}="${attr(value)}"`).join(" ");
+  return `
+    <label class="tablet-option">
+      <input type="${inputType}" name="${name}" value="${item.id}" data-label="${attr(item.name)}" data-price="${Number(item.price || 0)}" data-cost="${Number(item.cost || 0)}" ${extraData} ${checked}>
+      <span>
+        <strong>${item.name}</strong>
+        ${meta ? `<small>${meta}</small>` : ""}
+      </span>
+      <b>${options.free ? "Dahil" : `${money(item.price || 0)}${suffix}`}</b>
+    </label>
+  `;
+}
+
+function renderTabletPresentation() {
+  const halls = scopedItems("halls");
+  const packages = scopedItems("packages");
+  const extras = scopedItems("extras");
+  const menuCategories = scopedItems("menuCategories");
+  const menus = scopedItems("menus");
+  root.innerHTML = `
+    <form id="tabletPresentationForm" class="tablet-screen">
+      <section class="tablet-hero">
+        <div>
+          <span class="tablet-kicker">${currentTenant()?.name || "Düğün Platformu"}</span>
+          <h1>Beraber en doğru organizasyonu oluşturalım</h1>
+          <p>Salon, paket, menü ve özel hizmetleri seçtikçe toplam tutar canlı olarak güncellenir.</p>
+        </div>
+        <div class="tablet-total-card">
+          <span>Canlı Teklif</span>
+          <strong id="tabletGrandTotal">${money(0)}</strong>
+          <small id="tabletCostHint">Seçim yapılmadı</small>
+        </div>
+      </section>
+
+      <section class="tablet-layout">
+        <div class="tablet-builder">
+          <section class="tablet-panel">
+            <div class="tablet-section-head">
+              <div><span>1</span><h2>Organizasyon Bilgisi</h2></div>
+            </div>
+            <div class="form-grid thirds">
+              <div class="field"><label>Organizasyon Türü</label><select name="type">${selectOptions(scopedItems("organizationTypes"), "", "Seçin")}</select></div>
+              <div class="field"><label>Davetli Sayısı</label><input name="guests" id="tabletGuests" type="number" min="0" value="300"></div>
+              <div class="field"><label>Organizasyon Tarihi</label><input name="date" type="date" value="${today()}"></div>
+              <div class="field"><label>Ek Organizasyon Bedeli</label><input name="organizationPrice" id="tabletOrganizationPrice" type="number" min="0" value="0"></div>
+              <div class="field"><label>İskonto</label><input name="discountValue" id="tabletDiscount" type="number" min="0" value="0"></div>
+              <div class="field"><label>Kapora / Ön Ödeme</label><input name="deposit" id="tabletDeposit" type="number" min="0" value="0"></div>
+            </div>
+          </section>
+
+          <section class="tablet-panel">
+            <div class="tablet-section-head"><div><span>2</span><h2>Salon Seçimi</h2></div></div>
+            <div class="tablet-choice-grid">
+              ${halls.map((item, index) => tabletChoiceCard("hallId", { ...item, price: 0, cost: 0 }, { type: "radio", free: true, checked: index === 0, meta: `${item.capacity || "-"} kişi · ${item.description || "Salon bilgisi"}` })).join("") || empty("Salon tanımı yok")}
+            </div>
+          </section>
+
+          <section class="tablet-panel">
+            <div class="tablet-section-head"><div><span>3</span><h2>Paket Seçimi</h2></div></div>
+            <div class="tablet-choice-grid">
+              ${packages.map((item, index) => tabletChoiceCard("packageId", item, { type: "radio", suffix: " + kişi başı", checked: index === 0, meta: `${typeName(item.type)} · kişi başı ${money(item.personPrice || 0)}`, data: { personPrice: item.personPrice || 0, personCost: item.personCost || 0 } })).join("") || empty("Paket tanımı yok")}
+            </div>
+          </section>
+
+          <section class="tablet-panel">
+            <div class="tablet-section-head"><div><span>4</span><h2>Yemek ve İkram</h2></div></div>
+            ${menuCategories.map(category => {
+              const items = menus.filter(menu => menu.category === category.value);
+              if (!items.length) return "";
+              return `<div class="tablet-menu-group"><h3>${category.name}</h3><div class="tablet-choice-grid">${items.map(item => tabletChoiceCard("menus", item, { suffix: " / kişi", meta: `${item.productionType === "supplier" ? "Dışarıdan alım" : item.productionType === "stock" ? "Stoktan tüketim" : "Mekan mutfağı"}${item.stockItemId ? ` · ${stockName(item.stockItemId)}` : ""}` })).join("")}</div></div>`;
+            }).join("")}
+          </section>
+
+          <section class="tablet-panel">
+            <div class="tablet-section-head"><div><span>5</span><h2>Özel Seçimler</h2></div></div>
+            <div class="tablet-choice-grid">
+              ${extras.map(item => tabletChoiceCard("extras", item, { meta: item.supplierId ? supplierName(item.supplierId) : "Ek hizmet / opsiyon" })).join("") || empty("Özel seçim yok")}
+            </div>
+          </section>
+        </div>
+
+        <aside class="tablet-summary">
+          <h2>Teklif Özeti</h2>
+          <div class="tablet-summary-row"><span>Salon + paket</span><strong id="tabletPackageTotal">${money(0)}</strong></div>
+          <div class="tablet-summary-row"><span>Yemek / ikram</span><strong id="tabletMenuTotal">${money(0)}</strong></div>
+          <div class="tablet-summary-row"><span>Özel seçimler</span><strong id="tabletExtraTotal">${money(0)}</strong></div>
+          <div class="tablet-summary-row"><span>İskonto sonrası</span><strong id="tabletAfterDiscount">${money(0)}</strong></div>
+          <div class="tablet-summary-row"><span>Tahsilat</span><strong id="tabletPaidTotal">${money(0)}</strong></div>
+          <div class="tablet-summary-total"><span>Kalan</span><strong id="tabletRemainingTotal">${money(0)}</strong></div>
+          <div class="tablet-picked" id="tabletPickedList">Henüz seçim yapılmadı.</div>
+          <div class="tablet-summary-actions">
+            <button class="btn secondary" type="button" data-action="resetTabletPresentation">Seçimleri Temizle</button>
+            <button class="btn" type="button" data-action="tabletPresentationNote">Görüşme Notu Al</button>
+          </div>
+        </aside>
+      </section>
+    </form>
   `;
 }
 
@@ -3341,12 +3448,7 @@ function renderTypes() {
 }
 
 function renderMenuCategories() {
-  const editing = currentManagementEdit("menuCategories");
-  root.innerHTML = `
-    ${pageTitle("⌑", "Menü Kategorileri", "Kırmızı etler, beyaz etler, sebzeler gibi yemek kategorilerini yönetin", "Ana Sayfaya Dön")}
-    ${simpleForm("categoryForm", editing ? "Menü Kategorisini Düzenle" : "Yeni Menü Kategorisi Ekle", "Kategori Adı *", "Örn: Kırmızı Etler, Beyaz Etler, Salatalar", "Sistem Değeri *", "Örn: kirmizi_etler, beyaz_etler", editing ? "Güncelle" : "+ Ekle", editing)}
-    <section class="panel"><h2>Mevcut Menü Kategorileri</h2><div class="category-grid">${scopedItems("menuCategories").map(item => categoryCard(item, "menuCategories")).join("") || empty("Henüz menü kategorisi eklenmemiş")}</div></section>
-  `;
+  renderMenus();
 }
 
 function renderHalls() {
@@ -3380,10 +3482,24 @@ function renderExtras() {
 
 function renderMenus() {
   const editing = currentManagementEdit("menus");
+  const editingCategory = currentManagementEdit("menuCategories");
   const suppliers = scopedItems("suppliers");
   const stockItems = scopedItems("stock");
   root.innerHTML = `
-    ${pageTitle("☷", "Yemek Menüsü", "Menü kalemlerini kategori, maliyet ve satış fiyatıyla yönetin")}
+    ${pageTitle("☷", "Yemek Menüsü", "Kategori ve yemek/ikram kalemlerini tek ekrandan yönetin")}
+    <section class="panel">
+      <h2>${editingCategory ? "Menü Kategorisini Düzenle" : "Yeni Menü Kategorisi Ekle"}</h2>
+      <form id="categoryForm">
+        <div class="form-grid">
+          <div class="field"><label>Kategori Adı *</label><input name="name" required placeholder="Örn: İçecekler, Kına İkramları, Ana Yemekler" value="${attr(editingCategory?.name || "")}"><div class="hint">Rezervasyon ve tablet sunumda menüler bu başlıkların altında görünür.</div></div>
+          <div class="field"><label>Sistem Değeri</label><input name="value" placeholder="Boş bırakılırsa otomatik oluşur" value="${attr(editingCategory?.value || "")}"><div class="hint">Teknik değer; boş kalabilir.</div></div>
+        </div>
+        ${managementActions(editingCategory ? "Kategoriyi Güncelle" : "+ Kategori Ekle", editingCategory, true)}
+      </form>
+      <div class="category-grid menu-category-strip">
+        ${scopedItems("menuCategories").map(item => categoryCard(item, "menuCategories")).join("") || empty("Henüz menü kategorisi eklenmemiş")}
+      </div>
+    </section>
     <section class="panel"><h2>${editing ? "Menü Öğesini Düzenle" : "Yeni Menü Öğesi Ekle"}</h2><form id="menuForm"><div class="form-grid"><div class="field"><label>Yemek Adı *</label><input name="name" required placeholder="Örn: Kuru pasta ikramı" value="${attr(editing?.name || "")}"></div><div class="field"><label>Kategori *</label><select name="category" required>${selectOptions(scopedItems("menuCategories"), editing?.category || "", "Seçin")}</select></div><div class="field"><label>Hazırlama Şekli</label><select name="productionType"><option value="kitchen" ${!editing || editing?.productionType === "kitchen" ? "selected" : ""}>Mekan mutfağı / aşçı</option><option value="supplier" ${editing?.productionType === "supplier" ? "selected" : ""}>Dışarıdan hazır alım</option><option value="stock" ${editing?.productionType === "stock" ? "selected" : ""}>Stoktan hazır tüketim</option><option value="service" ${editing?.productionType === "service" ? "selected" : ""}>Sadece hizmet</option></select></div><div class="field"><label>Tedarikçi</label><select name="supplierId"><option value="">Tedarikçi seçin</option>${suppliers.map(item => `<option value="${item.id}" ${editing?.supplierId === item.id ? "selected" : ""}>${item.name}</option>`).join("")}</select></div><div class="field"><label>Alış / Maliyet (₺)</label><input name="cost" type="number" min="0" value="${attr(editing?.cost ?? "")}"></div><div class="field"><label>Satış Fiyatı (₺)</label><input name="price" type="number" min="0" value="${attr(editing?.price ?? "")}"></div><div class="field"><label>Stok Bağlantısı</label><select name="stockItemId"><option value="">Stoktan düşmesin</option>${stockItems.map(item => `<option value="${item.id}" ${editing?.stockItemId === item.id ? "selected" : ""}>${item.name} (${Number(item.quantity || 0)} ${item.unit || "adet"})</option>`).join("")}</select></div><div class="field"><label>Kişi Başı Stok Çıkışı</label><input name="stockQtyPerGuest" type="number" min="0" step="0.01" placeholder="Örn: 0.35 kola, 1 porsiyon" value="${attr(editing?.stockQtyPerGuest ?? "")}"></div><div class="field"><label>Stok Hesaplama</label><select name="stockMode"><option value="per_guest" ${!editing || editing?.stockMode === "per_guest" ? "selected" : ""}>Kişi sayısına göre</option><option value="unlimited" ${editing?.stockMode === "unlimited" ? "selected" : ""}>Sınırsız / serbest içim paylı</option><option value="fixed" ${editing?.stockMode === "fixed" ? "selected" : ""}>Sabit miktar</option></select></div></div>${managementActions(editing ? "Menüyü Güncelle" : "+ Menüye Ekle", editing)}</form></section>
     <section class="panel"><h2>Mevcut Menü</h2><div class="list">${scopedItems("menus").map(menuRow).join("") || empty("Menü öğesi eklenmedi")}</div></section>
   `;
@@ -3535,6 +3651,54 @@ function updateQuote() {
   document.querySelector("#quoteFloatingTotal").textContent = money(totals.grandTotal);
   document.querySelector("#quoteFloatingPaid").textContent = money(totals.paid);
   document.querySelector("#quoteFloatingRemaining").textContent = money(totals.remaining);
+}
+
+function tabletQuoteTotals(form) {
+  const guests = Number(form.tabletGuests?.value || 0);
+  const base = Number(form.tabletOrganizationPrice?.value || 0);
+  const discount = Number(form.tabletDiscount?.value || 0);
+  const paid = Number(form.tabletDeposit?.value || 0);
+  const packageInput = form.querySelector('input[name="packageId"]:checked');
+  const menuInputs = [...form.querySelectorAll('input[name="menus"]:checked')];
+  const extraInputs = [...form.querySelectorAll('input[name="extras"]:checked')];
+  const packageTotal = packageInput ? Number(packageInput.dataset.price || 0) + guests * Number(packageInput.dataset.personPrice || 0) : 0;
+  const packageCost = packageInput ? Number(packageInput.dataset.cost || 0) + guests * Number(packageInput.dataset.personCost || 0) : 0;
+  const menus = menuInputs.reduce((sum, input) => sum + Number(input.dataset.price || 0) * guests, 0);
+  const menuCost = menuInputs.reduce((sum, input) => sum + Number(input.dataset.cost || 0) * guests, 0);
+  const extras = extraInputs.reduce((sum, input) => sum + Number(input.dataset.price || 0), 0);
+  const extraCost = extraInputs.reduce((sum, input) => sum + Number(input.dataset.cost || 0), 0);
+  const subtotal = base + packageTotal + menus + extras;
+  const afterDiscount = Math.max(0, subtotal - discount);
+  const remaining = Math.max(0, afterDiscount - paid);
+  return {
+    packageTotal: base + packageTotal,
+    menus,
+    extras,
+    afterDiscount,
+    paid,
+    remaining,
+    cost: packageCost + menuCost + extraCost,
+    picked: [
+      packageInput?.dataset.label,
+      ...menuInputs.map(input => input.dataset.label),
+      ...extraInputs.map(input => input.dataset.label)
+    ].filter(Boolean)
+  };
+}
+
+function updateTabletQuote() {
+  const form = document.querySelector("#tabletPresentationForm");
+  if (!form) return;
+  const totals = tabletQuoteTotals(form);
+  document.querySelector("#tabletGrandTotal").textContent = money(totals.afterDiscount);
+  document.querySelector("#tabletPackageTotal").textContent = money(totals.packageTotal);
+  document.querySelector("#tabletMenuTotal").textContent = money(totals.menus);
+  document.querySelector("#tabletExtraTotal").textContent = money(totals.extras);
+  document.querySelector("#tabletAfterDiscount").textContent = money(totals.afterDiscount);
+  document.querySelector("#tabletPaidTotal").textContent = money(totals.paid);
+  document.querySelector("#tabletRemainingTotal").textContent = money(totals.remaining);
+  document.querySelector("#tabletCostHint").textContent = `Tahmini maliyet: ${money(totals.cost)}`;
+  document.querySelector("#tabletPickedList").textContent = totals.picked.length ? `Seçilenler: ${totals.picked.join(", ")}` : "Henüz seçim yapılmadı.";
 }
 
 function selectedCatalogLines(form, field, catalogName) {
@@ -3950,6 +4114,8 @@ function bindForms() {
 
   document.querySelector("#detailedReservationForm")?.addEventListener("input", updateQuote);
   document.querySelector("#detailedReservationForm")?.addEventListener("change", updateQuote);
+  document.querySelector("#tabletPresentationForm")?.addEventListener("input", updateTabletQuote);
+  document.querySelector("#tabletPresentationForm")?.addEventListener("change", updateTabletQuote);
   document.querySelector("#detailedReservationForm")?.addEventListener("submit", event => {
     event.preventDefault();
     const form = event.target;
@@ -4172,6 +4338,7 @@ function bindForms() {
   });
 
   updateQuote();
+  updateTabletQuote();
 }
 
 function addItem(collection, item) {
@@ -4195,6 +4362,7 @@ function render() {
   syncNavigation(state.activeView);
   const views = {
     dashboard: renderDashboard,
+    tabletPresentation: renderTabletPresentation,
     newReservation: renderNewReservation,
     reservations: renderReservations,
     reports: renderReports,
@@ -4294,6 +4462,26 @@ document.addEventListener("click", event => {
     list.insertAdjacentHTML("beforeend", installmentRow());
     document.querySelector("#installmentHint")?.setAttribute("hidden", "");
     list.querySelector(".installment-row:last-child input")?.focus();
+    return;
+  }
+  if (action === "resetTabletPresentation") {
+    const form = document.querySelector("#tabletPresentationForm");
+    if (!form) return;
+    form.querySelectorAll('input[type="checkbox"]').forEach(input => { input.checked = false; });
+    const hallRadios = [...form.querySelectorAll('input[name="hallId"]')];
+    const packageRadios = [...form.querySelectorAll('input[name="packageId"]')];
+    hallRadios.forEach((input, index) => { input.checked = index === 0; });
+    packageRadios.forEach((input, index) => { input.checked = index === 0; });
+    form.tabletGuests.value = 300;
+    form.tabletOrganizationPrice.value = 0;
+    form.tabletDiscount.value = 0;
+    form.tabletDeposit.value = 0;
+    updateTabletQuote();
+    showToast("Tablet seçimleri temizlendi");
+    return;
+  }
+  if (action === "tabletPresentationNote") {
+    showToast("Görüşme notunu sonra rezervasyon formuna işleyebiliriz");
     return;
   }
   if (action === "removeInstallment") {

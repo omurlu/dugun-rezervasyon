@@ -219,6 +219,9 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 
 ## Menu - Stok Recete Notu
 
+- `Menu Kategorileri` ve `Yemek Menusu` tek ekranda birlestirildi.
+- Sol menude ayri `Menu Kategorileri` satiri kaldirildi; eski `#menuCategories` adresi acilirsa yine `Yemek Menusu` birlesik ekranina gider.
+- Birlesik ekranda ustte kategori ekleme/duzenleme ve kategori kartlari, altta yemek/ikram kalemi ekleme/duzenleme ve mevcut menu listesi bulunur.
 - Kuru pasta, pogaca, kola/limitsiz mesrubat gibi kalemler `Yemek Menusu` tarafinda musterinin sececegi menu olarak durur; arka tarafta `Stok Baglantisi` ile depodan dusurulur.
 - Menu tanimina `Hazirlama Sekli` eklendi: mekan mutfagi/asci, disaridan hazir alim, stoktan hazir tuketim veya sadece hizmet.
 - Menu tanimina tedarikci, stok baglantisi, kisi basi stok cikisi ve stok hesaplama sekli eklendi.
@@ -226,6 +229,17 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - `Sinirsiz / serbest icim` seciminde kisi basi miktara %20 pay eklenerek stok cikisi hesaplanir.
 - Rezervasyon silinirse veya duzenlenirse, o rezervasyondan otomatik olusan stok hareketleri geri alinir ve yeniden hesaplanir.
 - Demo olarak `Kola 1 Litre`, `Kuru Pasta`, `Pogaca`, `Ordovr Sarf Malzemesi` stok kartlari ve bunlara bagli menu ornekleri eklendi.
+
+## Tablet Sunum Notu
+
+- Sol menuye `Tablet Sunum` ekrani eklendi.
+- Bu ekran mekanin yonetim ekrani degil, gorusme sirasinda ciftlere tabletten gosterilecek secim/teklif ekranidir.
+- Salon, paket, yemek/ikram ve ozel secimler kartlarla gosterilir.
+- Davetli sayisi, ek organizasyon bedeli, iskonto ve kapora alanlari bulunur.
+- Her secimde teklif ozeti canli guncellenir: salon+paket, yemek/ikram, ozel secimler, iskonto sonrasi, tahsilat ve kalan.
+- Kasa alt bari bu ekranda gizlenir; ciftlerin gorecegi ekranda finans/kasa bilgisi cikmaz.
+- `Secimleri Temizle` butonu tablet ekranindaki secimleri ilk hale alir.
+- Tablet dikey/portre tutuldugunda teklif ozeti sagda durup ekrani daraltmaz; secimlerin altina iner.
 
 ## Tedarikci Cari Notu
 
