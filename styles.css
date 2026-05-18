@@ -2185,6 +2185,221 @@ tbody tr:hover td {
 .top-earners-grid article:nth-child(4) { background: #fff7ed; border-color: #fed7aa; }
 .top-earners-grid article:nth-child(5) { background: #f0fdfa; border-color: #99f6e4; }
 
+/* Düğün Yolu brand alignment */
+:root {
+  --rose: #d11f6a;
+  --violet: #7c3aed;
+  --gold: #b88932;
+  --ink: #151827;
+  --muted: #697386;
+  --line: #eceef3;
+  --soft: #faf7f8;
+  --shadow: 0 16px 38px rgba(21, 24, 39, .06);
+  --shadow-soft: 0 8px 22px rgba(21, 24, 39, .045);
+  --shadow-hover: 0 18px 42px rgba(21, 24, 39, .08);
+}
+
+body {
+  background: linear-gradient(180deg, #fff 0%, #faf7f8 48%, #f8fafc 100%);
+}
+
+.brand,
+.page-title h1,
+.calendar-title,
+.report-title {
+  color: #171321;
+}
+
+.brand-heart,
+.title-icon {
+  color: var(--rose);
+}
+
+.page-title h1,
+.calendar-title,
+.report-title {
+  position: relative;
+}
+
+.page-title h1::after,
+.report-title::after {
+  content: "";
+  display: block;
+  width: 54px;
+  height: 3px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--rose), var(--gold));
+}
+
+.panel,
+.month-card,
+.stat-card,
+.mini-card,
+.tenant-card,
+.sms-card,
+.person-card,
+.reservation-row,
+.item-row,
+.assignment-card,
+.executive-summary article,
+.collection-grid article,
+.top-earners-grid article,
+.insight-grid article,
+.comparison-card,
+.sms-overview-grid article,
+.staff-report-summary article {
+  background: #fff;
+  border-color: rgba(236, 238, 243, .96);
+}
+
+.panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #171321;
+}
+
+.panel h2::before {
+  content: "";
+  width: 4px;
+  height: 22px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--rose), var(--gold));
+  flex: 0 0 auto;
+}
+
+.btn {
+  background: var(--rose);
+  box-shadow: 0 12px 24px rgba(209, 31, 106, .17);
+}
+
+.btn:hover {
+  background: #b9195a;
+  box-shadow: 0 15px 30px rgba(209, 31, 106, .2);
+}
+
+.btn.secondary,
+.small-icon,
+.table-action-btn,
+.icon-button,
+.credit-pill,
+.account-pill,
+.menu-button,
+.tab {
+  background: #fff;
+}
+
+.side-link:hover,
+.side-link.active,
+.side-primary.active,
+.top-nav a:hover,
+.top-nav a.active {
+  background: #fff1f6;
+  color: var(--rose);
+}
+
+.side-link.active,
+.side-primary.active {
+  box-shadow: inset 3px 0 0 var(--rose);
+}
+
+.stat-card,
+.executive-summary article,
+.collection-grid article,
+.sms-overview-grid article,
+.staff-report-summary article {
+  border-top: 3px solid rgba(209, 31, 106, .18);
+}
+
+.stat-card:nth-child(1),
+.executive-summary article:nth-child(1),
+.collection-grid article:nth-child(1),
+.sms-overview-grid article:nth-child(1),
+.staff-report-summary article:nth-child(1) {
+  border-top-color: var(--rose);
+}
+
+.stat-card:nth-child(2),
+.executive-summary article:nth-child(2),
+.collection-grid article:nth-child(2),
+.sms-overview-grid article:nth-child(2),
+.staff-report-summary article:nth-child(2) {
+  border-top-color: var(--gold);
+}
+
+.stat-card:nth-child(3),
+.executive-summary article:nth-child(3),
+.collection-grid article:nth-child(3),
+.sms-overview-grid article:nth-child(3),
+.staff-report-summary article:nth-child(3) {
+  border-top-color: #2563eb;
+}
+
+.stat-card:nth-child(4),
+.executive-summary article:nth-child(4),
+.sms-overview-grid article:nth-child(4),
+.staff-report-summary article:nth-child(4) {
+  border-top-color: #059669;
+}
+
+.executive-summary article:nth-child(5),
+.staff-report-summary article:nth-child(5) {
+  border-top-color: #7c3aed;
+}
+
+.executive-summary article:nth-child(6),
+.staff-report-summary article:nth-child(6) {
+  border-top-color: #dc2626;
+}
+
+.stat-card::after {
+  display: none;
+}
+
+.insight-grid article.positive,
+.comparison-card.positive {
+  background: #fff;
+  border-color: rgba(236, 238, 243, .96);
+  border-left-color: #059669;
+}
+
+.insight-grid article.warning {
+  background: #fff;
+  border-color: rgba(236, 238, 243, .96);
+  border-left-color: var(--gold);
+}
+
+.insight-grid article.neutral {
+  background: #fff;
+  border-color: rgba(236, 238, 243, .96);
+  border-left-color: var(--rose);
+}
+
+.comparison-card.negative {
+  background: #fff;
+  border-color: rgba(236, 238, 243, .96);
+  border-left-color: #dc2626;
+}
+
+.table-wrap {
+  border-color: rgba(236, 238, 243, .96);
+}
+
+th {
+  color: #5d6475;
+  background: #fbfbfc;
+}
+
+.stat-card:nth-child(n),
+.executive-summary article:nth-child(n),
+.collection-grid article:nth-child(n),
+.sms-overview-grid article:nth-child(n),
+.staff-report-summary article:nth-child(n),
+.top-earners-grid article:nth-child(n) {
+  background: #fff;
+}
+
 .stat-card.green .stat-value,
 .stat-card.green .stat-icon { color: var(--green); }
 .stat-card.red .stat-value,

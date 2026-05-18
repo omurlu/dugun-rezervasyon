@@ -150,6 +150,10 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - Panel, kart, tablo, buton, form ve ozet kutularinda daha modern golge, bosluk, kenarlik ve hover davranisi kullanildi.
 - Rapor, SMS, personel ve genel ozet kartlari pastel tonlarla birbirinden ayrildi.
 - Tema islevlere dokunmadan CSS seviyesinde uygulandi; veri kaydi ve ekran davranislari ayni kalir.
+- Son pastel agirlikli tema kullanici tarafindan fazla renkli bulundu.
+- Tema Düğün Yolu alt modulu gibi daha beyaz, sade ve kurumsal bir cizgiye cekildi.
+- Ozet kutularinda renkli zeminler kaldirildi; renk artik kutu ust cizgileri, baslik vurgulari ve ana aksiyonlarda kullanilir.
+- Basliklarda rose/altin marka vurgusu kullanildi; dashboard hissi daha premium ve sakin hale getirildi.
 
 ## GitHub baglantisi
 
