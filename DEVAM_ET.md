@@ -213,6 +213,9 @@ SMS bolumu merkezi havuz mantigina gore duzenlendi:
 - `Tum Hareketler` sekmesi tedarikci, urun/hizmet ve tarih araligi filtreleriyle mevcut cari raporu gosterir.
 - `Detayli Rapor` sekmesi urun/hizmet bazinda tedarikci toplamlarini, odenen ve kalan tutarlari listeler.
 - `+ Yeni Hareket Ekle` butonu bu ekranda da tedarikci cari hareketi popup'ini acar.
+- Tedarikci cari hareket formuna miktar/adet, birim, birim alis fiyati, birim satis fiyati, toplam alis/borc ve organizasyona satis alanlari eklendi.
+- Toplam alis/borc miktar x birim alis olarak, organizasyona satis miktar x birim satis olarak otomatik hesaplanir.
+- Tedarikci borcu alis tutarindan, organizasyon satis/kar takibi satis tutarindan okunacak sekilde veri saklanir.
 
 ## GitHub baglantisi
 

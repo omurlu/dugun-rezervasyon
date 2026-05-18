@@ -2634,6 +2634,11 @@ function supplierTransactionTotals(transactions) {
 function supplierTransactionModal(editing = null) {
   if (!state.showSupplierTransactionModal && !editing) return "";
   const suppliers = scopedItems("suppliers");
+  const quantity = Number(editing?.quantity || 1);
+  const unitCost = Number(editing?.unitCost || editing?.amount || 0) / Math.max(1, Number(editing?.quantity || 1));
+  const unitSalePrice = Number(editing?.unitSalePrice || editing?.saleAmount || 0) / Math.max(1, Number(editing?.quantity || 1));
+  const amount = Number(editing?.amount ?? quantity * unitCost);
+  const saleAmount = Number(editing?.saleAmount ?? quantity * unitSalePrice);
   const reservations = visibleReservations()
     .filter(item => !item.comparisonDemoReservation)
     .slice()
@@ -2651,9 +2656,19 @@ function supplierTransactionModal(editing = null) {
             <div class="field"><label>Ürün / Hizmet *</label><input name="product" required value="${attr(editing?.product || "")}" placeholder="Çiçek dekoru, fotoğraf çekimi..."></div>
             <div class="field"><label>Organizasyon</label><select name="reservationId"><option value="">Organizasyonsuz</option>${reservations.map(item => `<option value="${item.id}" ${editing?.reservationId === item.id ? "selected" : ""}>${new Date(item.date).toLocaleDateString("tr-TR")} - ${item.couple}</option>`).join("")}</select></div>
             <div class="field"><label>Tarih</label><input name="date" type="date" value="${attr(editing?.date || today())}"></div>
-            <div class="field"><label>Alacak / Tutar</label><input name="amount" type="number" min="0" value="${Number(editing?.amount || 0)}"></div>
+            <div class="field"><label>Miktar / Adet</label><input name="quantity" id="supplierQuantity" type="number" min="0" step="0.01" value="${quantity || 1}"></div>
+            <div class="field"><label>Birim</label><select name="unit"><option value="adet" ${(editing?.unit || "adet") === "adet" ? "selected" : ""}>Adet</option><option value="paket" ${editing?.unit === "paket" ? "selected" : ""}>Paket</option><option value="metre" ${editing?.unit === "metre" ? "selected" : ""}>Metre</option><option value="hizmet" ${editing?.unit === "hizmet" ? "selected" : ""}>Hizmet</option><option value="set" ${editing?.unit === "set" ? "selected" : ""}>Set</option></select></div>
+            <div class="field"><label>Birim Alış (₺)</label><input name="unitCost" id="supplierUnitCost" type="number" min="0" step="0.01" value="${Math.round(unitCost)}"></div>
+            <div class="field"><label>Birim Satış (₺)</label><input name="unitSalePrice" id="supplierUnitSalePrice" type="number" min="0" step="0.01" value="${Math.round(unitSalePrice)}"></div>
+            <div class="field"><label>Toplam Alış / Borç</label><input name="amount" id="supplierAmount" type="number" min="0" value="${Math.round(amount)}"></div>
+            <div class="field"><label>Organizasyona Satış</label><input name="saleAmount" id="supplierSaleAmount" type="number" min="0" value="${Math.round(saleAmount)}"></div>
             <div class="field"><label>Ödenen</label><input name="paid" type="number" min="0" value="${Number(editing?.paid || 0)}"></div>
             <div class="field full"><label>Not</label><textarea name="description" placeholder="Fatura, teslimat veya ödeme notu...">${attr(editing?.description || "")}</textarea></div>
+          </div>
+          <div class="supplier-calc-strip">
+            <span>Tedarikçiye Borç: <strong id="supplierCostPreview">${money(amount)}</strong></span>
+            <span>Organizasyona Satış: <strong id="supplierSalePreview">${money(saleAmount)}</strong></span>
+            <span>Tahmini Kar: <strong id="supplierProfitPreview">${money(saleAmount - amount)}</strong></span>
           </div>
           <div class="form-actions">
             <button class="btn secondary" type="button" data-action="closeSupplierTransactionModal">Vazgeç</button>
@@ -2691,7 +2706,7 @@ function supplierAccountReport(transactions) {
         <article><span>Ödenen</span><strong class="profit">${money(totals.paid)}</strong></article>
         <article><span>Kalan Borç</span><strong class="${remaining > 0 ? "danger-text" : "profit"}">${money(remaining)}</strong></article>
       </div>
-      ${transactions.length ? table(["Tarih", "Tedarikçi", "Ürün / Hizmet", "Organizasyon", "Alacak", "Ödenen", "Kalan", "Durum", "Ödeme"], transactions.map(item => {
+      ${transactions.length ? table(["Tarih", "Tedarikçi", "Ürün / Hizmet", "Miktar", "Organizasyon", "Alış", "Satış", "Ödenen", "Kalan", "Durum", "Ödeme"], transactions.map(item => {
         const supplier = state.suppliers.find(row => row.id === item.supplierId);
         const reservation = state.reservations.find(row => row.id === item.reservationId);
         const rest = Number(item.amount || 0) - Number(item.paid || 0);
@@ -2699,8 +2714,10 @@ function supplierAccountReport(transactions) {
           new Date(item.date).toLocaleDateString("tr-TR"),
           `<strong>${supplier?.name || "-"}</strong>`,
           item.product || "-",
+          `${Number(item.quantity || 1)} ${item.unit || "adet"}`,
           reservation?.couple || "-",
           money(item.amount),
+          money(item.saleAmount || 0),
           money(item.paid),
           `<span class="${rest > 0 ? "danger-text" : "profit"}">${money(rest)}</span>`,
           `<span class="badge ${assignmentStatusClass(item.status)}">${supplierTransactionStatusLabel(item.status)}</span>`,
@@ -2768,10 +2785,12 @@ function renderSupplierAccount() {
   const productRows = Object.values(allTransactions.reduce((map, item) => {
     const key = `${item.supplierId || "none"}_${item.product || "Belirtilmedi"}`;
     if (!map[key]) {
-      map[key] = { supplierId: item.supplierId, product: item.product || "Belirtilmedi", count: 0, amount: 0, paid: 0 };
+      map[key] = { supplierId: item.supplierId, product: item.product || "Belirtilmedi", count: 0, quantity: 0, unit: item.unit || "adet", amount: 0, saleAmount: 0, paid: 0 };
     }
     map[key].count += 1;
+    map[key].quantity += Number(item.quantity || 1);
     map[key].amount += Number(item.amount || 0);
+    map[key].saleAmount += Number(item.saleAmount || 0);
     map[key].paid += Number(item.paid || 0);
     return map;
   }, {})).sort((a, b) => b.amount - a.amount);
@@ -2802,13 +2821,17 @@ function renderSupplierAccount() {
     ${activeTab === "details" ? `
       <section class="panel">
         <h2>Ürün / Hizmet Bazlı Detaylı Rapor</h2>
-        ${productRows.length ? table(["Tedarikçi", "Ürün / Hizmet", "İşlem", "Toplam", "Ödenen", "Kalan"], productRows.map(item => {
+        ${productRows.length ? table(["Tedarikçi", "Ürün / Hizmet", "Miktar", "İşlem", "Alış", "Satış", "Kar", "Ödenen", "Kalan"], productRows.map(item => {
           const rest = item.amount - item.paid;
+          const profit = item.saleAmount - item.amount;
           return [
             supplierName(item.supplierId),
             item.product,
+            `${item.quantity} ${item.unit}`,
             item.count,
             money(item.amount),
+            money(item.saleAmount),
+            `<span class="${profit >= 0 ? "profit" : "danger-text"}">${money(profit)}</span>`,
             `<span class="profit">${money(item.paid)}</span>`,
             `<span class="${rest > 0 ? "danger-text" : "profit"}">${money(rest)}</span>`
           ];
@@ -3282,6 +3305,21 @@ function collectInstallments(form) {
   })).filter(item => item.date || item.amount || item.note);
 }
 
+function updateSupplierTransactionTotals() {
+  const form = document.querySelector("#supplierTransactionForm");
+  if (!form) return;
+  const quantity = Number(form.quantity?.value || 0);
+  const unitCost = Number(form.unitCost?.value || 0);
+  const unitSalePrice = Number(form.unitSalePrice?.value || 0);
+  const amount = Math.round(quantity * unitCost);
+  const saleAmount = Math.round(quantity * unitSalePrice);
+  if (form.amount) form.amount.value = amount;
+  if (form.saleAmount) form.saleAmount.value = saleAmount;
+  document.querySelector("#supplierCostPreview").textContent = money(amount);
+  document.querySelector("#supplierSalePreview").textContent = money(saleAmount);
+  document.querySelector("#supplierProfitPreview").textContent = money(saleAmount - amount);
+}
+
 function bindForms() {
   document.querySelector("#tenantForm")?.addEventListener("submit", event => {
     event.preventDefault();
@@ -3500,16 +3538,23 @@ function bindForms() {
 
   document.querySelector("#supplierTransactionForm")?.addEventListener("submit", event => {
     event.preventDefault();
+    updateSupplierTransactionTotals();
     const data = Object.fromEntries(new FormData(event.target));
     const amount = Number(data.amount || 0);
+    const saleAmount = Number(data.saleAmount || 0);
     const paid = Number(data.paid || 0);
     const transaction = {
       supplierId: data.supplierId,
       reservationId: data.reservationId,
       date: data.date || today(),
       product: data.product,
+      quantity: Number(data.quantity || 1),
+      unit: data.unit || "adet",
+      unitCost: Number(data.unitCost || 0),
+      unitSalePrice: Number(data.unitSalePrice || 0),
       description: data.description,
       amount,
+      saleAmount,
       paid,
       status: paid >= amount ? "paid" : paid > 0 ? "partial" : "unpaid"
     };
@@ -3527,6 +3572,10 @@ function bindForms() {
     saveState();
     render();
     showToast("Tedarikçi hareketi eklendi");
+  });
+
+  document.querySelector("#supplierTransactionForm")?.addEventListener("input", event => {
+    if (["quantity", "unitCost", "unitSalePrice"].includes(event.target.name)) updateSupplierTransactionTotals();
   });
 
   document.querySelector("#staffAssignmentForm")?.addEventListener("submit", event => {
