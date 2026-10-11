@@ -1,0 +1,12 @@
+Düğün rezervasyon projemize kaldığımız yerden devam edelim.
+
+GitHub depomuz: https://github.com/omurlu/dugun-rezervasyon
+
+Bilgisayardaki ana proje klasörümüz:
+C:\Users\bilgi\OneDrive\Belgeler\GitHub\dugun-rezervasyon
+
+Önce DEVAM_ET.md dosyasını ve mevcut proje durumunu kontrol ederek nerede kaldığımızı belirleyelim. Sonra mevcut tasarımı ve çalışan özellikleri koruyarak adım adım ilerleyelim.
+
+Yaptığımız önemli değişiklikleri test edelim, GitHub'a commit ve push işlemleriyle kaydedelim ve DEVAM_ET.md dosyasını güncelleyelim.
+
+Uzun vadeli hedefimiz projeyi PHP + MySQL'e dönüştürüp kendi hosting sunucumuzda çalıştırmak. Mevcut kodları incelemeden sıfırdan başlamayalım.
