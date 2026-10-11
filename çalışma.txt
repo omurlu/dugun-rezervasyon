@@ -10,3 +10,23 @@ C:\Users\bilgi\OneDrive\Belgeler\GitHub\dugun-rezervasyon
 Yaptığımız önemli değişiklikleri test edelim, GitHub'a commit ve push işlemleriyle kaydedelim ve DEVAM_ET.md dosyasını güncelleyelim.
 
 Uzun vadeli hedefimiz projeyi PHP + MySQL'e dönüştürüp kendi hosting sunucumuzda çalıştırmak. Mevcut kodları incelemeden sıfırdan başlamayalım.
+
+
+
+https://github.com/omurlu/dugun-rezervasyon
+
+
+
+Düğün rezervasyon projesinde takvimdeki ay değiştirme sorununu düzeltelim.
+
+Mevcut projeyi ve ilgili dosyaları önce incele.
+
+- Mevcut tasarımı koru.
+- Çalışan özellikleri bozma.
+- Gereksiz kod değişikliği yapma.
+- Değişikliği test et.
+- Proje notlarını güncelle.
+- Sonucu GitHub'a kaydedebilmemiz için gereken adımları tamamlayalım.
+
+Önce sorunun kaynağını tespit et, sonra düzenlemeye geç.
+
